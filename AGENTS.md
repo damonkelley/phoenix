@@ -1,6 +1,6 @@
 # Project instructions
 
-Read `README.md` and `reference/README.md` before making changes.
+Read `README.md`, `reference/README.md`, and `reference/SPEC.md` before making changes.
 
 ## Current phase
 
@@ -40,7 +40,6 @@ CLI contracts.
 ## Isolation
 
 Do not inspect, read, search, copy, or derive implementation ideas from sibling
-repositories, especially `phoenix-lab` and `chad-phoenix`. They are
-deliberately excluded from this agent's context. Work only with files inside
-this repository and the public RealWorld documentation unless the user
-explicitly requests otherwise.
+repositories. They are deliberately excluded from this agent's context. Work
+only with files inside this repository and the public RealWorld documentation
+unless the user explicitly requests otherwise.
