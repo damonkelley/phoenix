@@ -4,6 +4,9 @@ An experiment in developing a regenerative software system from a real,
 behaviorally characterized application, inspired by Chad Fowler's
 [Phoenix Architecture writing on Leaflet](https://aicoding.leaflet.pub/).
 
+See [`APPROACH.md`](APPROACH.md) for the staged reference, architecture
+extraction, generation, and regeneration experiment.
+
 ## Current phase: reference application
 
 For now this repository contains only `reference/`, a conventional standalone

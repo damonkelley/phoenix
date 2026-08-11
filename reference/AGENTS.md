@@ -4,6 +4,7 @@ Read `README.md` and `SPEC.md` before making changes in this directory.
 
 ## Current phase
 
+This directory is phase 1 of the experiment described in `../APPROACH.md`.
 Build only the conventional RealWorld reference application. Do not introduce
 Phoenix tooling, generated code, specification machinery, or a proposed Phoenix
 directory structure.

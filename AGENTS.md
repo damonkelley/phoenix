@@ -1,7 +1,7 @@
 # Repository instructions
 
-Read `README.md` before making changes. Also follow any more specific
-`AGENTS.md` found in the directory being changed.
+Read `README.md` and `APPROACH.md` before making changes. Also follow any more
+specific `AGENTS.md` found in the directory being changed.
 
 ## Purpose
 
