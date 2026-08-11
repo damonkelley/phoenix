@@ -1,7 +1,8 @@
 # Phoenix
 
 An experiment in developing a regenerative software system from a real,
-behaviorally characterized application.
+behaviorally characterized application, inspired by Chad Fowler's
+[Phoenix Architecture writing on Leaflet](https://aicoding.leaflet.pub/).
 
 ## Current phase: reference application
 
@@ -34,6 +35,5 @@ mechanism, not the human specification language.
 ## Isolation rule
 
 The reference must be built as an ordinary application without consulting or
-copying implementation code from `phoenix-lab` or Chad Fowler's Phoenix
-repository. Its public behavior will later become the evidence used for
-regeneration experiments.
+copying other implementation unless explicitly directed to do so. Its public
+behavior will later become the evidence used for regeneration experiments.
