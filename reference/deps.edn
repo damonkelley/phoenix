@@ -3,4 +3,8 @@
         org.babashka/cli {:mvn/version "0.12.86"}}
  :aliases
  {:test {:extra-paths ["test"]
-         :main-opts ["-m" "realworld.test-runner"]}}}
+         :main-opts ["-m" "realworld.test-runner"]}
+  :nrepl {:extra-deps {nrepl/nrepl {:mvn/version "1.7.0"}
+                       cider/cider-nrepl {:mvn/version "0.62.2"}}
+          :main-opts ["-m" "nrepl.cmdline"
+                      "--middleware" "[cider.nrepl/cider-middleware]"]}}}
