@@ -1,0 +1,7 @@
+{:align-map-columns? true
+ :remove-multiple-non-indenting-spaces? true
+ :split-keypairs-over-multiple-lines? false
+ :extra-indents
+ {defdescribe [[:block 1]]
+  describe    [[:block 1]]
+  it          [[:block 1]]}}

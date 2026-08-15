@@ -3,7 +3,7 @@
   (:gen-class))
 
 (def register-spec
-  {:email {:desc "Account email address"}
+  {:email    {:desc "Account email address"}
    :password {:desc "Account password"}})
 
 (defn- register [{:keys [opts]}]
@@ -13,17 +13,17 @@
    :options (select-keys opts [:email :password])})
 
 (def command-table
-  [{:cmds ["register"]
-    :fn register
-    :spec register-spec
+  [{:cmds     ["register"]
+    :fn       register
+    :spec     register-spec
     :restrict true}])
 
 (defn run [arguments]
   (try
-    {:exit 0
+    {:exit   0
      :result (cli/dispatch command-table arguments)}
     (catch clojure.lang.ExceptionInfo exception
-      {:exit 2
+      {:exit  2
        :error (ex-message exception)})))
 
 (defn -main [& arguments]

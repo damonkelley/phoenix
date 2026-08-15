@@ -6,8 +6,14 @@
         :override-builtin true
         :task (shell "clojure -M")}
 
-  nrepl {:doc "Start an nREPL server with CIDER middleware"
-         :task (shell "clojure -M:nrepl")}
+  nrepl {:doc "Start an nREPL server with test dependencies"
+         :task (shell "clojure -M:test:nrepl")}
+
+  format {:doc "Format Clojure source"
+          :task (shell "clojure -M:format fix src test")}
+
+  format:check {:doc "Check Clojure source formatting"
+                :task (shell "clojure -M:format check src test")}
 
   run {:doc "Run the RealWorld CLI"
        :override-builtin true
