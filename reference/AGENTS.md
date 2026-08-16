@@ -1,6 +1,10 @@
 # RealWorld reference instructions
 
-Read `README.md` and `SPEC.md` before making changes in this directory.
+Read `README.md` and `SPEC.md` before making changes in this directory. Before
+changing application behavior, also read the applicable feature specifications
+under `docs/specs/` and the ADRs they reference. If no applicable feature
+specification exists, agree on the intended behavior with the user and add one
+before implementing it.
 
 ## Current phase
 
@@ -35,6 +39,10 @@ Prefer tests at public boundaries. Behavior eventually used for regeneration
 must not depend on reference implementation namespaces or internal data
 structures. Keep implementation-focused unit tests separate from black-box CLI
 contracts.
+
+Treat `docs/specs/` as the repository's current public behavior and keep it in
+sync with intentional behavior changes. Specifications should describe
+observable outcomes and rules rather than implementation structure.
 
 Use the public RealWorld documentation to clarify product behavior. Do not
 consult sibling Phoenix implementations.
