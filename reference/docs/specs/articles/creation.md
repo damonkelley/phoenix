@@ -2,7 +2,7 @@
 
 ## Command
 
-Create an article as the active account:
+Create an article as the authenticated account:
 
 ```sh
 realworld create-article \
@@ -17,19 +17,19 @@ The `--tag` option is optional and may be supplied more than once.
 
 ## Authentication
 
-Article creation requires an active account established by a successful login
-using the same application database. Registration alone does not authorize
-article creation.
+Article creation requires an authenticated account resolved from the
+persistent session established by a successful login using the same application
+database. Registration alone does not authorize article creation.
 
-Attempting to create an article without an active account produces:
+Attempting to create an article without that authenticated account produces:
 
 ```text
 Login is required
 ```
 
-Input validation occurs before the active account is resolved. An invalid
-article reports its applicable validation errors rather than an authentication
-error.
+Input validation occurs before the authenticated account is resolved. An
+invalid article reports its applicable validation errors rather than an
+authentication error.
 
 ## Input rules
 
@@ -53,25 +53,16 @@ increment.
 
 ## Slug
 
-The application generates a lowercase, URL-safe slug from the title. For
-example:
+The application generates a slug from a lowercase, URL-safe form of the title
+and the first six hexadecimal characters of a random UUID. For example:
 
 ```text
-Hello World -> hello-world
+Hello World -> hello-world-a1b2c3
 ```
 
-The returned slug is the authoritative article identifier; callers must not
-assume they can derive it from the title.
-
-Slugs are globally unique. If the title-derived slug already exists, the
-application appends a numeric suffix beginning with `-2` and increments it
-until an unused slug is found. Duplicate article titles are therefore allowed:
-
-```text
-Hello World -> hello-world
-Hello World -> hello-world-2
-Hello World -> hello-world-3
-```
+The random suffix allows duplicate article titles. The returned slug is the
+authoritative article identifier; callers must not assume they can derive it
+from the title.
 
 ## Success
 
@@ -80,7 +71,7 @@ the SQLite application database. It writes the generated slug to standard
 output:
 
 ```text
-hello-world
+hello-world-a1b2c3
 ```
 
 The slug will identify the article in subsequent listing and viewing behavior.
@@ -112,4 +103,4 @@ This feature follows:
 - [ADR 0002: Validation error reporting](../../adr/0002-validation-error-reporting.md)
 - [ADR 0003: Operational failure classification](../../adr/0003-operational-failure-classification.md)
 - [ADR 0004: SQLite database location](../../adr/0004-sqlite-database-location.md)
-- [ADR 0006: Active CLI account](../../adr/0006-active-cli-account.md)
+- [ADR 0006: Persistent CLI session](../../adr/0006-persistent-cli-session.md)

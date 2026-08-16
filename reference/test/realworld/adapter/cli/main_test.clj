@@ -65,6 +65,33 @@
         (expect (= 0 (:exit result)))
         (expect (= "Success" (:output result))))))
 
+  (describe "create-article command"
+    (it "dispatches article content and repeated tags"
+      (let [dispatched (atom nil)
+            result (cli/run
+                    ["create-article"
+                     "--title" "Hello World"
+                     "--description" "An introduction"
+                     "--body" "Article contents"
+                     "--tag" "clojure"
+                     "--tag" "sqlite"]
+                    {:application-factory (constantly (Object.))
+                     :dispatch-command
+                     (fn [_context command]
+                       (reset! dispatched command)
+                       {:realworld.application/response
+                        (response/ok
+                         :data {:realworld.article/slug "hello-world"})})})]
+        (expect (= {:realworld.command/name :realworld.article/create
+                    :realworld.command/parameters
+                    {:realworld.article/title       "Hello World"
+                     :realworld.article/description "An introduction"
+                     :realworld.article/body        "Article contents"
+                     :realworld.article/tags        ["clojure" "sqlite"]}}
+                   @dispatched))
+        (expect (= 0 (:exit result)))
+        (expect (= "hello-world" (:output result))))))
+
   (describe "unknown command"
     (it "is rejected as malformed usage before initialization"
       (let [initialized? (atom false)

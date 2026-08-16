@@ -4,8 +4,10 @@
             [realworld.account :as account]
             [realworld.adapter.authentication :as authentication]
             [realworld.adapter.hashing :as hashing]
+            [realworld.adapter.slug :as slug]
             [realworld.adapter.sqlite :as sqlite]
             [realworld.application :as application]
+            [realworld.article :as article]
             [realworld.interceptor :as interceptor])
   (:gen-class))
 
@@ -13,18 +15,30 @@
 
 (defn- application-context [database]
   (application/context
-    {:command-definitions account/command-definitions
-     :coeffect-resolvers  {:realworld.account/by-credentials (fn [email password]
-                                                               (authentication/account-by-credentials database email password))
-                           :realworld.account/by-email       (fn [email]
-                                                               (sqlite/account-by-email database email))
-                           :realworld.password/hash          hashing/hash-password
-                           :realworld.uuid/generate          random-uuid}
+    {:command-definitions (merge account/command-definitions
+                                 article/command-definitions)
+     :coeffect-resolvers  {:realworld.account/by-credentials  (fn [email password]
+                                                                (authentication/account-by-credentials database email password))
+                           :realworld.account/by-email        (fn [email]
+                                                                (sqlite/account-by-email database email))
+                           :realworld.slug/generate           (fn [title]
+                                                                (slug/from-title title
+                                                                                 (random-uuid)))
+                           :realworld.password/hash           hashing/hash-password
+                           :realworld.session/current-account (fn []
+                                                                (when-let [account-id (sqlite/session-account-id database)]
+                                                                  {:realworld.account/id account-id}))
+                           :realworld.time/now                (fn []
+                                                                (java.time.Instant/now))
+                           :realworld.uuid/generate           random-uuid}
      :effect-interpreters {:realworld.account/create (fn [context account]
                                                        (sqlite/create-account! database account)
                                                        context)
+                           :realworld.article/create (fn [context article]
+                                                       (sqlite/create-article! database article)
+                                                       context)
                            :realworld.session/start  (fn [context account]
-                                                       (sqlite/activate-account! database account)
+                                                       (sqlite/start-session! database account)
                                                        context)}}))
 
 (defn initialize [database-path]
@@ -46,6 +60,15 @@
 (defn- login [{:keys [opts]}]
   (account-command :realworld.account/login opts))
 
+(defn- create-article [{:keys [opts]}]
+  (let [{:keys [title description body tag]} opts]
+    {:realworld.command/name :realworld.article/create
+     :realworld.command/parameters
+     {:realworld.article/title       title
+      :realworld.article/description description
+      :realworld.article/body        body
+      :realworld.article/tags        (vec (or tag []))}}))
+
 (def ^:private credential-options
   {:email    {:coerce :string
               :desc   "Account email address"}
@@ -60,6 +83,17 @@
    {:cmds     ["login"]
     :fn       login
     :spec     credential-options
+    :restrict true}
+   {:cmds     ["create-article"]
+    :fn       create-article
+    :spec     {:title       {:coerce :string
+                             :desc   "Article title"}
+               :description {:coerce :string
+                             :desc   "Article description"}
+               :body        {:coerce :string
+                             :desc   "Article body"}
+               :tag         {:coerce [:string]
+                             :desc   "Article tag"}}
     :restrict true}])
 
 (defn- error-message [response]
@@ -75,7 +109,10 @@
   (let [response (:realworld.application/response context)]
     (if (= :ok (:realworld.response/outcome response))
       {:exit   0
-       :output "Success"
+       :output (or (get-in response
+                           [:realworld.response/data
+                            :realworld.article/slug])
+                   "Success")
        :result response}
       {:exit   1
        :error  (error-message response)

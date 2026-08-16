@@ -10,8 +10,9 @@ realworld login --email alice@example.com --password secret123
 
 ## Success
 
-A successful login records the account as the active account for subsequent
-commands using the same application database. Its success output is:
+A successful login starts a persistent CLI session for the authenticated
+account. Subsequent commands using the same application database can resolve
+that authenticated account. The success output is:
 
 ```text
 Success
@@ -40,7 +41,7 @@ credential regardless of its length or contents.
 
 Validation occurs before account lookup or password verification. An invalid
 login reports only its applicable validation errors and does not change the
-active account.
+current session.
 
 ## Credential verification
 
@@ -60,13 +61,13 @@ compared with plaintext passwords.
 
 ## Session behavior
 
-At most one account is active in an application database. A successful login
-replaces any previously active account. Validation and credential failures
-leave the current active account unchanged.
+At most one CLI session exists in an application database. A successful login
+replaces any existing session. Validation and credential failures leave the
+current session unchanged.
 
-The active account persists across CLI processes and is scoped by the SQLite
-database selected through the process's working directory. The initial slice
-does not provide session expiration or a logout command.
+The session persists across CLI processes and is scoped by the SQLite database
+selected through the process's working directory. The initial slice does not
+provide session expiration or a logout command.
 
 ## Login errors
 
@@ -93,4 +94,4 @@ This feature follows:
 - [ADR 0003: Operational failure classification](../../adr/0003-operational-failure-classification.md)
 - [ADR 0004: SQLite database location](../../adr/0004-sqlite-database-location.md)
 - [ADR 0005: Password credential storage](../../adr/0005-password-credential-storage.md)
-- [ADR 0006: Active CLI account](../../adr/0006-active-cli-account.md)
+- [ADR 0006: Persistent CLI session](../../adr/0006-persistent-cli-session.md)

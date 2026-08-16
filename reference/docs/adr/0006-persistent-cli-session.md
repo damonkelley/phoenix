@@ -1,4 +1,4 @@
-# 0006: Active CLI account
+# 0006: Persistent CLI session
 
 ## Status
 
@@ -17,13 +17,13 @@ successful password check as a session that disappears when the process exits.
 
 ## Decision
 
-A successful CLI login records the authenticated account as the active account
-in the SQLite application database. At most one account is active in a database
-at a time, and another successful login replaces it.
+A successful CLI login starts a persistent session for the authenticated
+account in the SQLite application database. At most one CLI session exists in
+a database at a time, and another successful login replaces it.
 
-Subsequent CLI commands that require authentication use the active account.
-Registration does not activate an account. Failed login attempts do not clear
-or replace an existing active account.
+Subsequent CLI commands that require authentication resolve the authenticated
+account represented by the current session. Registration does not start a
+session. Failed login attempts do not clear or replace the current session.
 
 The initial CLI does not expose authentication tokens, session expiration, or
 logout behavior. A future web interface may represent authentication
@@ -33,9 +33,9 @@ differently while reusing the application credential-verification behavior.
 
 Login state persists across one-shot CLI processes and follows the database
 location conventions in [ADR 0004](0004-sqlite-database-location.md). Commands
-run from different working directories have independent active accounts.
+run from different working directories have independent sessions.
 
-SQLite persistence must represent the active account and preserve referential
+SQLite persistence must represent the current session and preserve referential
 integrity with stored accounts. Black-box login scenarios can use temporary
 working directories to isolate both accounts and session state.
 
