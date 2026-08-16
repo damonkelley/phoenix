@@ -28,14 +28,22 @@
    {:realworld.command/coeffects {}
     :realworld.command/handler   (fn [_ _]
                                    {:realworld.response/outcome :ok
-                                    :realworld.response/data    "description"})}})
+                                    :realworld.response/data    "description"})}
+   :test.command/lookup
+   {:realworld.command/coeffects
+    {:test/found [:test/find [:test/value]]}
+    :realworld.command/handler
+    (fn [{:test/keys [found]} _]
+      {:realworld.response/outcome :ok
+       :realworld.response/data    found})}})
 
 (defn unexpected [operation]
   (fn [& _]
     (throw (ex-info "Unexpected operation" {:operation operation}))))
 
 (def coeffect-resolvers
-  {:test/generate-id (fn [] "id")})
+  {:test/find        identity
+   :test/generate-id (fn [] "id")})
 
 (def effect-interpreters
   {:test/perform (fn [context _parameters] context)})
@@ -112,6 +120,15 @@
         (expect (nil? (:realworld.application/error result))))))
 
   (describe "coeffect resolution"
+    (it "resolves coeffect arguments from parameter paths"
+      (let [result (application/dispatch
+                    (test-context)
+                    {:realworld.command/name       :test.command/lookup
+                     :realworld.command/parameters {:test/value "value"}})]
+        (expect (= {:realworld.response/outcome :ok
+                    :realworld.response/data    "value"}
+                   (:realworld.application/response result)))))
+
     (it "turns resolver failures into operational errors"
       (let [failure (ex-info "Coeffect unavailable" {})
             context (test-context

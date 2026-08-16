@@ -1,5 +1,6 @@
 (ns realworld.application
   (:require [realworld.interceptor :as interceptor]
+            [realworld.response :as response]
             [realworld.schema :as schema]))
 
 (def resolve-command-definition
@@ -17,8 +18,8 @@
                        definition)
                 (-> context
                     (assoc :realworld.application/response
-                           {:realworld.response/outcome :error
-                            :realworld.response/data    {:realworld.command/name command-name}})
+                           (response/error
+                            :data {:realworld.command/name command-name}))
                     (interceptor/terminate)))))})
 
 (def validate-command
@@ -32,10 +33,9 @@
               (if (seq errors)
                 (-> context
                     (assoc :realworld.application/response
-                           {:realworld.response/outcome :error
-                            :realworld.response/data
-                            {:realworld.error/type     :validation
-                             :realworld.error/messages errors}})
+                           (response/error
+                            :data {:realworld.error/type     :validation
+                                   :realworld.error/messages errors}))
                     (interceptor/terminate))
                 context)))})
 
@@ -45,12 +45,17 @@
             (let [declarations (get-in context
                                        [:realworld.application/command-definition
                                         :realworld.command/coeffects])
+                  parameters (get-in context
+                                     [:realworld.application/command
+                                      :realworld.command/parameters])
                   resolvers (:realworld.application/coeffect-resolvers context)
                   coeffects (reduce-kv
-                             (fn [resolved key [operation & args]]
+                             (fn [resolved key [operation & parameter-paths]]
                                (assoc resolved
                                       key
-                                      (apply (get resolvers operation) args)))
+                                      (apply (get resolvers operation)
+                                             (map #(get-in parameters %)
+                                                  parameter-paths))))
                              {}
                              declarations)]
               (assoc context
@@ -77,9 +82,8 @@
             (-> context
                 (assoc :realworld.application/error error)
                 (assoc :realworld.application/response
-                       {:realworld.response/outcome :error
-                        :realworld.response/data
-                        {:realworld.error/type :operational}})))})
+                       (response/error
+                        :data {:realworld.error/type :operational}))))})
 
 (def interpret-effects
   {:name  :interpret-effects

@@ -13,10 +13,11 @@
                                   :realworld.account/password "secret123"}})
 
 (def coeffect-resolvers
-  {:realworld.uuid/generate (fn [] "id")})
+  {:realworld.account/by-email (constantly nil)
+   :realworld.uuid/generate    (constantly "id")})
 
 (def effect-interpreters
-  {:realworld.repository/create
+  {:realworld.account/create
    (fn [context account]
      (assoc context ::effect.create account))})
 
@@ -74,11 +75,13 @@
                     :realworld.response/events  [{:realworld.event/type    :realworld.account/registered
                                                   :realworld.account/id    "id"
                                                   :realworld.account/email "alice@example.com"}]
-                    :realworld.response/effects [[:realworld.repository/create
-                                                  {:realworld.account/email    "alice@example.com"
+                    :realworld.response/effects [[:realworld.account/create
+                                                  {:realworld.account/id       "id"
+                                                   :realworld.account/email    "alice@example.com"
                                                    :realworld.account/password "secret123"}]]}
                    (:realworld.application/response result)))
-        (expect (= {:realworld.account/email    "alice@example.com"
+        (expect (= {:realworld.account/id       "id"
+                    :realworld.account/email    "alice@example.com"
                     :realworld.account/password "secret123"}
                    (::effect.create result)))))
 
@@ -90,7 +93,7 @@
                                  response (:realworld.application/response result)]
                              (= {:outcome     :ok
                                  :event-email (:realworld.account/email parameters)
-                                 :created     parameters}
+                                 :created     (assoc parameters :realworld.account/id "id")}
                                 {:outcome     (:realworld.response/outcome response)
                                  :event-email (-> response
                                                   :realworld.response/events
@@ -106,7 +109,10 @@
                                  created (::effect.create result)]
                              (if (schema/valid? account/RegisterCommand command)
                                (and (= :ok (:realworld.response/outcome response))
-                                    (= (:realworld.command/parameters command) created))
+                                    (= (assoc (:realworld.command/parameters command)
+                                              :realworld.account/id
+                                              "id")
+                                       created))
                                (and (= :error (:realworld.response/outcome response))
                                     (= :validation (get-in response [:realworld.response/data
                                                                      :realworld.error/type]))
@@ -185,5 +191,19 @@
         (expect (nil? (::effect.create result)))))
 
     (it "rejects an email that is already registered"
-      {:skip true}
-      (expect false))))
+      (let [looked-up-email (atom nil)
+            context (test-context
+                     {:coeffect-resolvers
+                      {:realworld.account/by-email
+                       (fn [email]
+                         (reset! looked-up-email email)
+                         {:realworld.account/id    "existing-id"
+                          :realworld.account/email email})}})
+            result (application/dispatch context registration-command)]
+        (expect (= "alice@example.com" @looked-up-email))
+        (expect (= {:realworld.response/outcome :error
+                    :realworld.response/data
+                    {:realworld.error/type     :domain
+                     :realworld.error/messages #{"Email is already taken"}}}
+                   (:realworld.application/response result)))
+        (expect (nil? (::effect.create result)))))))

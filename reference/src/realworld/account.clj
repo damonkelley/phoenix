@@ -1,5 +1,6 @@
 (ns realworld.account
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [realworld.response :as response]))
 
 (def ^:private email-pattern
   #"[A-Za-z0-9_%+-]+(?:\.[A-Za-z0-9_%+-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*")
@@ -54,15 +55,25 @@
 
 (def command-definitions
   {:realworld.account/register
-   {:realworld.command/schema    RegisterCommand
-    :realworld.command/coeffects {:realworld.account/id [:realworld.uuid/generate]}
-    :realworld.command/handler   (fn [{:realworld.account/keys [id]}
-                                      {:realworld.account/keys [email password]}]
-                                   {:realworld.response/outcome :ok
-                                    :realworld.response/data    {:realworld.account/id id}
-                                    :realworld.response/events  [{:realworld.event/type    :realworld.account/registered
-                                                                  :realworld.account/id    id
-                                                                  :realworld.account/email email}]
-                                    :realworld.response/effects [[:realworld.repository/create
-                                                                  {:realworld.account/email    email
-                                                                   :realworld.account/password password}]]})}})
+   {:realworld.command/schema RegisterCommand
+    :realworld.command/coeffects
+    {:realworld.account/existing-account
+     [:realworld.account/by-email [:realworld.account/email]]
+     :realworld.account/id
+     [:realworld.uuid/generate]}
+    :realworld.command/handler
+    (fn [{:realworld.account/keys [existing-account id]}
+         {:realworld.account/keys [email password]}]
+      (if existing-account
+        (response/error
+         :data {:realworld.error/type     :domain
+                :realworld.error/messages #{"Email is already taken"}})
+        (response/ok
+         :data {:realworld.account/id id}
+         :events [{:realworld.event/type    :realworld.account/registered
+                   :realworld.account/id    id
+                   :realworld.account/email email}]
+         :effects [[:realworld.account/create
+                    {:realworld.account/id       id
+                     :realworld.account/email    email
+                     :realworld.account/password password}]])))}})
