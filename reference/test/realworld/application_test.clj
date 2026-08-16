@@ -6,9 +6,17 @@
   {:realworld.command/name       :test.command/execute
    :realworld.command/parameters {:test/value "value"}})
 
+(def Command
+  [:map
+   [:realworld.command/name [:= :test.command/execute]]
+   [:realworld.command/parameters
+    [:map
+     [:test/value :string]]]])
+
 (def command-definitions
   {:test.command/execute
-   {:realworld.command/coeffects {:test/id [:test/generate-id]}
+   {:realworld.command/schema    Command
+    :realworld.command/coeffects {:test/id [:test/generate-id]}
     :realworld.command/handler   (fn [{:test/keys [id]}
                                       {:test/keys [value]}]
                                    {:realworld.response/outcome :ok
@@ -84,6 +92,24 @@
         (expect (= {:realworld.response/outcome :ok
                     :realworld.response/data    "description"}
                    (:realworld.application/response result))))))
+
+  (describe "command validation"
+    (it "returns validation errors before resolving coeffects or interpreting effects"
+      (let [context (test-context
+                     {:coeffect-resolvers
+                      {:test/generate-id (unexpected :coeffect)}
+                      :effect-interpreters
+                      {:test/perform (unexpected :effect)}})
+            result (application/dispatch
+                    context
+                    {:realworld.command/name       :test.command/execute
+                     :realworld.command/parameters {}})]
+        (expect (= {:realworld.response/outcome :error
+                    :realworld.response/data
+                    {:realworld.error/type     :validation
+                     :realworld.error/messages #{"Value is required"}}}
+                   (:realworld.application/response result)))
+        (expect (nil? (:realworld.application/error result))))))
 
   (describe "coeffect resolution"
     (it "turns resolver failures into operational errors"

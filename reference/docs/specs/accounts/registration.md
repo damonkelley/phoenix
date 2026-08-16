@@ -10,8 +10,8 @@ realworld register --email alice@example.com --password secret123
 
 ## Success
 
-A successful registration creates an account with the normalized email address
-and supplied password. Its success output is:
+A successful registration creates an account with the supplied email address
+and password. Its success output is:
 
 ```text
 Success
@@ -21,18 +21,15 @@ Success
 
 ### Email
 
-Leading and trailing whitespace is trimmed from an email before validation and
-identity comparison. An email is required after trimming.
-
-An email must have the form `local-part@domain` and use this practical ASCII
-subset of Internet email addresses:
+An email is required and must have the form `local-part@domain` using this
+practical ASCII subset of Internet email addresses:
 
 - The local part contains letters, digits, and `.`, `_`, `%`, `+`, or `-`.
 - A dot cannot be first, last, or repeated consecutively in the local part.
 - The domain contains one or more labels separated by dots.
 - A domain label contains letters, digits, or hyphens and cannot begin or end
   with a hyphen.
-- Whitespace is not allowed within the address.
+- Whitespace is not allowed anywhere in the address.
 
 Email validation does not verify that the domain or mailbox exists. Email
 identity and uniqueness are case-insensitive.

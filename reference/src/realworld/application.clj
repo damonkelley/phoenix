@@ -1,24 +1,6 @@
 (ns realworld.application
-  (:require [exoscale.interceptor :as interceptor]))
-
-(def command-definitions
-  {:realworld.system/describe
-   {:realworld.command/coeffects {}
-    :realworld.command/handler   (fn [_ _]
-                                   {:realworld.response/outcome :ok
-                                    :realworld.response/data    "Hello, world"})}
-   :realworld.account/register
-   {:realworld.command/coeffects {:realworld.account/id [:realworld.uuid/generate]}
-    :realworld.command/handler   (fn [{:realworld.account/keys [id]}
-                                      {:realworld.account/keys [email password]}]
-                                   {:realworld.response/outcome :ok
-                                    :realworld.response/data    {:realworld.account/id id}
-                                    :realworld.response/events  [{:realworld.event/type    :realworld.account/registered
-                                                                  :realworld.account/id    id
-                                                                  :realworld.account/email email}]
-                                    :realworld.response/effects [[:realworld.repository/create
-                                                                  {:realworld.account/email    email
-                                                                   :realworld.account/password password}]]})}})
+  (:require [realworld.interceptor :as interceptor]
+            [realworld.schema :as schema]))
 
 (def resolve-command-definition
   {:name  :resolve-command-definition
@@ -38,6 +20,24 @@
                            {:realworld.response/outcome :error
                             :realworld.response/data    {:realworld.command/name command-name}})
                     (interceptor/terminate)))))})
+
+(def validate-command
+  {:name  :validate-command
+   :enter (fn [context]
+            (let [definition (get context :realworld.application/command-definition)
+                  command-schema (:realworld.command/schema definition)
+                  command (:realworld.application/command context)
+                  errors (when command-schema
+                           (schema/validate command-schema command))]
+              (if (seq errors)
+                (-> context
+                    (assoc :realworld.application/response
+                           {:realworld.response/outcome :error
+                            :realworld.response/data
+                            {:realworld.error/type     :validation
+                             :realworld.error/messages errors}})
+                    (interceptor/terminate))
+                context)))})
 
 (def resolve-coeffects
   {:name  :resolve-coeffects
@@ -98,6 +98,7 @@
   [handle-operational-error
    interpret-effects
    resolve-command-definition
+   validate-command
    resolve-coeffects
    invoke-command-definition])
 
