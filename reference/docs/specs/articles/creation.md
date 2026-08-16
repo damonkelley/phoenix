@@ -5,7 +5,7 @@
 Create an article as the authenticated account:
 
 ```sh
-realworld create-article \
+realworld article create \
   --title "Hello World" \
   --description "An introduction" \
   --body "Article contents" \

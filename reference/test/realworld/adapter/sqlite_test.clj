@@ -108,4 +108,56 @@
                     (catch SQLException _
                       true)))
           (finally
+            (delete-database! path)))))
+
+    (it "lists article summaries newest first"
+      (let [path (temporary-database-path)
+            database (sqlite/database path)
+            alice {:realworld.account/id
+                   (parse-uuid "00000000-0000-0000-0000-000000000001")
+                   :realworld.account/email         "alice@example.com"
+                   :realworld.account/password-hash "alice-hash"}
+            bob {:realworld.account/id
+                 (parse-uuid "00000000-0000-0000-0000-000000000002")
+                 :realworld.account/email         "bob@example.com"
+                 :realworld.account/password-hash "bob-hash"}
+            older {:realworld.article/slug        "older"
+                   :realworld.article/author-id   (:realworld.account/id alice)
+                   :realworld.article/title       "Older"
+                   :realworld.article/description "Older description"
+                   :realworld.article/body        "Older body"
+                   :realworld.article/tags        ["clojure" "sqlite"]
+                   :realworld.article/created-at
+                   (java.time.Instant/parse "2026-08-16T12:00:00Z")
+                   :realworld.article/updated-at
+                   (java.time.Instant/parse "2026-08-16T12:00:00Z")}
+            newest {:realworld.article/slug        "newest"
+                    :realworld.article/author-id   (:realworld.account/id bob)
+                    :realworld.article/title       "Newest"
+                    :realworld.article/description "Newest description"
+                    :realworld.article/body        "Newest body"
+                    :realworld.article/tags        []
+                    :realworld.article/created-at
+                    (java.time.Instant/parse "2026-08-16T13:00:00Z")
+                    :realworld.article/updated-at
+                    (java.time.Instant/parse "2026-08-16T13:00:00Z")}]
+        (try
+          (sqlite/initialize! database)
+          (expect (= [] (sqlite/article-feed database)))
+          (sqlite/create-account! database alice)
+          (sqlite/create-account! database bob)
+          (sqlite/create-article! database older)
+          (sqlite/create-article! database newest)
+          (expect (= [{:realworld.article/title "Newest"
+                       :realworld.article/slug  "newest"
+                       :realworld.article/tags  []
+                       :realworld.article/author
+                       {:realworld.account/email "bob@example.com"}}
+                      {:realworld.article/title "Older"
+                       :realworld.article/slug  "older"
+                       :realworld.article/tags  ["clojure" "sqlite"]
+                       :realworld.article/author
+                       {:realworld.account/email "alice@example.com"}}]
+                     (sqlite/article-feed database)))
+          (finally
             (delete-database! path)))))))

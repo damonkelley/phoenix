@@ -8,12 +8,12 @@
   #"hello-world-[0-9a-f]{6}")
 
 (defdescribe user-journey
-  (it "registers, logs in, and creates articles"
+  (it "registers, logs in, creates articles, and reads the feed"
     (support/with-workspace
       (fn [workspace]
         (let [registered (support/run-command
                           workspace
-                          "register"
+                          "account" "register"
                           "--email" "alice@example.com"
                           "--password" "secret123")]
           (expect (= 0 (:exit registered)))
@@ -23,7 +23,7 @@
 
         (let [logged-in (support/run-command
                          workspace
-                         "login"
+                         "account" "login"
                          "--email" "ALICE@EXAMPLE.COM"
                          "--password" "secret123")]
           (expect (= 0 (:exit logged-in)))
@@ -32,7 +32,7 @@
 
         (let [first-article (support/run-command
                              workspace
-                             "create-article"
+                             "article" "create"
                              "--title" "Hello World"
                              "--description" "An introduction"
                              "--body" "Article contents"
@@ -45,7 +45,7 @@
 
           (let [second-article (support/run-command
                                 workspace
-                                "create-article"
+                                "article" "create"
                                 "--title" "Hello World"
                                 "--description" "Another introduction"
                                 "--body" "More article contents")
@@ -53,21 +53,35 @@
             (expect (= 0 (:exit second-article)))
             (expect (re-matches slug-pattern second-slug))
             (expect (not= first-slug second-slug))
-            (expect (= "" (:err second-article))))))))
+            (expect (= "" (:err second-article)))
+
+            (let [feed (support/run-command workspace "article" "feed")]
+              (expect (= 0 (:exit feed)))
+              (expect (= (str "TITLE        SLUG                TAGS             AUTHOR\n"
+                              "-----------  ------------------  ---------------  -----------------\n"
+                              "Hello World  " second-slug "  (none)           alice@example.com\n"
+                              "Hello World  " first-slug "  clojure, sqlite  alice@example.com\n")
+                         (:out feed)))
+              (expect (= "" (:err feed)))))))))
 
   (it "protects registered identity and authenticated behavior"
     (support/with-workspace
       (fn [workspace]
+        (let [feed (support/run-command workspace "article" "feed")]
+          (expect (= 0 (:exit feed)))
+          (expect (= "No articles\n" (:out feed)))
+          (expect (= "" (:err feed))))
+
         (let [registered (support/run-command
                           workspace
-                          "register"
+                          "account" "register"
                           "--email" "alice@example.com"
                           "--password" "secret123")]
           (expect (= 0 (:exit registered))))
 
         (let [duplicate (support/run-command
                          workspace
-                         "register"
+                         "account" "register"
                          "--email" "Alice@Example.com"
                          "--password" "secret123")]
           (expect (= 1 (:exit duplicate)))
@@ -79,7 +93,7 @@
                  ["alice@example.com" "short "]]]
           (let [login (support/run-command
                        workspace
-                       "login"
+                       "account" "login"
                        "--email" email
                        "--password" password)]
             (expect (= 1 (:exit login)))
@@ -88,7 +102,7 @@
 
         (let [article (support/run-command
                        workspace
-                       "create-article"
+                       "article" "create"
                        "--title" "Hello World"
                        "--description" "An introduction"
                        "--body" "Article contents")]
@@ -101,7 +115,7 @@
       (fn [workspace]
         (let [registration (support/run-command
                             workspace
-                            "register"
+                            "account" "register"
                             "--email" "alice..smith@example-.com"
                             "--password" "short ")]
           (expect (= 1 (:exit registration)))
@@ -113,7 +127,7 @@
 
         (let [login (support/run-command
                      workspace
-                     "login"
+                     "account" "login"
                      "--email" "alice..smith@example.com"
                      "--password" "")]
           (expect (= 1 (:exit login)))
@@ -123,7 +137,7 @@
 
         (let [article (support/run-command
                        workspace
-                       "create-article"
+                       "article" "create"
                        "--title" " "
                        "--description" ""
                        "--body" "\t"

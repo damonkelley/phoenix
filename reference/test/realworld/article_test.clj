@@ -15,6 +15,10 @@
     :realworld.article/body        "Article contents"
     :realworld.article/tags        ["clojure" "sqlite"]}})
 
+(def feed-command
+  {:realworld.command/name       :realworld.article/feed
+   :realworld.command/parameters {}})
+
 (def create-command-schema
   (get-in article/command-definitions
           [:realworld.article/create :realworld.command/schema]))
@@ -29,8 +33,16 @@
 (def slug
   "hello-world-000000")
 
+(def feed-articles
+  [{:realworld.article/title  "Hello World"
+    :realworld.article/slug   slug
+    :realworld.article/tags   ["clojure" "sqlite"]
+    :realworld.article/author {:realworld.account/email
+                               "alice@example.com"}}])
+
 (def coeffect-resolvers
-  {:realworld.slug/generate           (constantly slug)
+  {:realworld.article/feed            (constantly feed-articles)
+   :realworld.slug/generate           (constantly slug)
    :realworld.session/current-account (constantly authenticated-account)
    :realworld.time/now                (constantly now)})
 
@@ -175,4 +187,29 @@
                                                (get-in response
                                                        [:realworld.response/data
                                                         :realworld.error/messages])))
-                                 :created?   (some? (::effect.create result))})))))))
+                                 :created?   (some? (::effect.create result))}))))))
+
+  (describe "feed"
+    (it "returns the resolved global article feed without authentication"
+      (let [result (application/dispatch
+                    (test-context
+                     {:coeffect-resolvers
+                      {:realworld.session/current-account
+                       (fn []
+                         (throw (ex-info "Unexpected authentication" {})))}})
+                    feed-command)]
+        (expect (= {:realworld.response/outcome :ok
+                    :realworld.response/data
+                    {:realworld.article/articles feed-articles}}
+                   (:realworld.application/response result)))))
+
+    (it "returns an empty feed"
+      (let [result (application/dispatch
+                    (test-context
+                     {:coeffect-resolvers
+                      {:realworld.article/feed (constantly [])}})
+                    feed-command)]
+        (expect (= {:realworld.response/outcome :ok
+                    :realworld.response/data
+                    {:realworld.article/articles []}}
+                   (:realworld.application/response result)))))))

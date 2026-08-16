@@ -31,6 +31,9 @@
    [:realworld.article/body Body]
    [:realworld.article/tags {:optional true} [:vector Tag]]])
 
+(def FeedParameters
+  [:map])
+
 (defn- create [{:realworld.account/keys [authenticated-account]
                 :realworld.article/keys [slug]
                 :realworld.time/keys    [now]}
@@ -54,6 +57,10 @@
                        :realworld.article/created)]
        :effects [[:realworld.article/create article]]))))
 
+(defn- feed [{:realworld.article/keys [articles]} _parameters]
+  (response/ok
+   :data {:realworld.article/articles articles}))
+
 (def command-definitions
   {:realworld.article/create
    {:realworld.command/schema    (command/schema :realworld.article/create CreateParameters)
@@ -64,4 +71,10 @@
                                    [:realworld.article/title]]
                                   :realworld.time/now
                                   [:realworld.time/now]}
-    :realworld.command/handler   create}})
+    :realworld.command/handler   create}
+
+   :realworld.article/feed
+   {:realworld.command/schema    (command/schema :realworld.article/feed FeedParameters)
+    :realworld.command/coeffects {:realworld.article/articles
+                                  [:realworld.article/feed]}
+    :realworld.command/handler   feed}})

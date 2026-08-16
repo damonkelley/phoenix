@@ -5,7 +5,7 @@
 Log in with the email address and password of a registered account:
 
 ```sh
-realworld login --email alice@example.com --password secret123
+realworld account login --email alice@example.com --password secret123
 ```
 
 ## Success

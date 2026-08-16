@@ -21,6 +21,8 @@
                                                                 (authentication/account-by-credentials database email password))
                            :realworld.account/by-email        (fn [email]
                                                                 (sqlite/account-by-email database email))
+                           :realworld.article/feed            (fn []
+                                                                (sqlite/article-feed database))
                            :realworld.slug/generate           (fn [title]
                                                                 (slug/from-title title
                                                                                  (random-uuid)))
@@ -69,6 +71,10 @@
       :realworld.article/body        body
       :realworld.article/tags        (vec (or tag []))}}))
 
+(defn- article-feed [_arguments]
+  {:realworld.command/name       :realworld.article/feed
+   :realworld.command/parameters {}})
+
 (def ^:private credential-options
   {:email    {:coerce :string
               :desc   "Account email address"}
@@ -76,15 +82,15 @@
               :desc   "Account password"}})
 
 (def command-table
-  [{:cmds     ["register"]
+  [{:cmds     ["account" "register"]
     :fn       register
     :spec     credential-options
     :restrict true}
-   {:cmds     ["login"]
+   {:cmds     ["account" "login"]
     :fn       login
     :spec     credential-options
     :restrict true}
-   {:cmds     ["create-article"]
+   {:cmds     ["article" "create"]
     :fn       create-article
     :spec     {:title       {:coerce :string
                              :desc   "Article title"}
@@ -94,6 +100,10 @@
                              :desc   "Article body"}
                :tag         {:coerce [:string]
                              :desc   "Article tag"}}
+    :restrict true}
+   {:cmds     ["article" "feed"]
+    :fn       article-feed
+    :spec     {}
     :restrict true}])
 
 (defn- error-message [response]
@@ -105,14 +115,66 @@
         :operational "Operation failed"
         "Command failed"))))
 
+(def ^:private article-feed-headings
+  ["TITLE" "SLUG" "TAGS" "AUTHOR"])
+
+(defn- article-feed-row [article]
+  (let [tags (:realworld.article/tags article)]
+    [(:realworld.article/title article)
+     (:realworld.article/slug article)
+     (if (seq tags)
+       (string/join ", " tags)
+       "(none)")
+     (get-in article
+             [:realworld.article/author
+              :realworld.account/email])]))
+
+(defn- column-widths [rows]
+  (mapv (fn [column]
+          (apply max (map count column)))
+        (apply map vector rows)))
+
+(defn- pad-right [value width]
+  (str value (apply str (repeat (- width (count value)) " "))))
+
+(defn- table-row [widths cells]
+  (string/join
+   "  "
+   (map-indexed (fn [index value]
+                  (if (= index (dec (count cells)))
+                    value
+                    (pad-right value (nth widths index))))
+                cells)))
+
+(defn- article-feed-output [articles]
+  (if (seq articles)
+    (let [article-rows (mapv article-feed-row articles)
+          rows (into [article-feed-headings] article-rows)
+          widths (column-widths rows)
+          separator (mapv #(apply str (repeat % "-")) widths)]
+      (string/join (System/lineSeparator)
+                   (map #(table-row widths %)
+                        (into [article-feed-headings separator]
+                              article-rows))))
+    "No articles"))
+
+(defn- success-output [response]
+  (let [data (:realworld.response/data response)]
+    (cond
+      (contains? data :realworld.article/articles)
+      (article-feed-output (:realworld.article/articles data))
+
+      (:realworld.article/slug data)
+      (:realworld.article/slug data)
+
+      :else
+      "Success")))
+
 (defn- command-result [context]
   (let [response (:realworld.application/response context)]
     (if (= :ok (:realworld.response/outcome response))
       {:exit   0
-       :output (or (get-in response
-                           [:realworld.response/data
-                            :realworld.article/slug])
-                   "Success")
+       :output (success-output response)
        :result response}
       {:exit   1
        :error  (error-message response)

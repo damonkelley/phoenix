@@ -84,6 +84,17 @@
         position
         tag]))))
 
+(defn- article-tags [database slug]
+  (mapv :tag
+        (jdbc/execute!
+         database
+         ["SELECT tag
+           FROM article_tags
+           WHERE article_slug = ?
+           ORDER BY position"
+          slug]
+         {:builder-fn result-set/as-unqualified-lower-maps})))
+
 (defn article-by-slug [database slug]
   (when-let [article
              (jdbc/execute-one!
@@ -99,14 +110,22 @@
      :realworld.article/title       (:title article)
      :realworld.article/description (:description article)
      :realworld.article/body        (:body article)
-     :realworld.article/tags        (mapv :tag
-                                          (jdbc/execute!
-                                           database
-                                           ["SELECT tag
-                                             FROM article_tags
-                                             WHERE article_slug = ?
-                                             ORDER BY position"
-                                            slug]
-                                           {:builder-fn result-set/as-unqualified-lower-maps}))
+     :realworld.article/tags        (article-tags database slug)
      :realworld.article/created-at  (java.time.Instant/parse (:created_at article))
      :realworld.article/updated-at  (java.time.Instant/parse (:updated_at article))}))
+
+(defn article-feed [database]
+  (mapv
+   (fn [article]
+     {:realworld.article/title  (:title article)
+      :realworld.article/slug   (:slug article)
+      :realworld.article/tags   (article-tags database (:slug article))
+      :realworld.article/author {:realworld.account/email
+                                 (:author_email article)}})
+   (jdbc/execute!
+    database
+    ["SELECT article.slug, article.title, account.email AS author_email
+      FROM articles AS article
+      JOIN accounts AS account ON account.id = article.author_id
+      ORDER BY article.created_at DESC, article.rowid DESC"]
+    {:builder-fn result-set/as-unqualified-lower-maps})))

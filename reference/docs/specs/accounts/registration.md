@@ -5,7 +5,7 @@
 Register an account with an email address and password:
 
 ```sh
-realworld register --email alice@example.com --password secret123
+realworld account register --email alice@example.com --password secret123
 ```
 
 ## Success
