@@ -1,4 +1,4 @@
-(ns realworld.end-to-end.account-journey-test
+(ns realworld.end-to-end.user-journey-test
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [lazytest.core :refer [defdescribe expect it]]
@@ -7,7 +7,7 @@
 (def slug-pattern
   #"hello-world-[0-9a-f]{6}")
 
-(defdescribe account-journey
+(defdescribe user-journey
   (it "registers, logs in, and creates articles"
     (support/with-workspace
       (fn [workspace]
