@@ -35,7 +35,7 @@
       (empty? password)
       (not (re-find #"\s" password))))
 
-(def Password
+(def RegistrationPassword
   [:and {:gen/schema [:string {:min 8}]}
    [:string {:error/message "Password is required"}]
    [:fn {:error/message "Password is required"} password-present?]
@@ -44,10 +44,48 @@
    [:fn {:error/message "Password must not contain whitespace"}
     password-without-whitespace?]])
 
+(def LoginPassword
+  [:and {:gen/schema [:string {:min 1}]}
+   [:string {:error/message "Password is required"}]
+   [:fn {:error/message "Password is required"} password-present?]])
+
 (def RegisterParameters
   [:map
    [:realworld.account/email Email]
-   [:realworld.account/password Password]])
+   [:realworld.account/password RegistrationPassword]])
+
+(def LoginParameters
+  [:map
+   [:realworld.account/email Email]
+   [:realworld.account/password LoginPassword]])
+
+(defn- register [{:realworld.account/keys [existing-account id password-hash]}
+                 {:realworld.account/keys [email]}]
+  (if existing-account
+    (response/error
+     :data {:realworld.error/type     :domain
+            :realworld.error/messages #{"Email is already taken"}})
+    (response/ok
+     :data {:realworld.account/id id}
+     :events [{:realworld.event/type    :realworld.account/registered
+               :realworld.account/id    id
+               :realworld.account/email email}]
+     :effects [[:realworld.account/create
+                {:realworld.account/id            id
+                 :realworld.account/email         email
+                 :realworld.account/password-hash password-hash}]])))
+
+(defn- login [{:realworld.account/keys [authenticated-account]} _parameters]
+  (if-let [account-id (:realworld.account/id authenticated-account)]
+    (response/ok
+     :data {:realworld.account/id account-id}
+     :events [{:realworld.event/type :realworld.account/logged-in
+               :realworld.account/id account-id}]
+     :effects [[:realworld.session/start
+                {:realworld.account/id account-id}]])
+    (response/error
+     :data {:realworld.error/type     :domain
+            :realworld.error/messages #{"Email or password is invalid"}})))
 
 (def command-definitions
   {:realworld.account/register
@@ -58,18 +96,12 @@
                                   [:realworld.uuid/generate]
                                   :realworld.account/password-hash
                                   [:realworld.password/hash [:realworld.account/password]]}
-    :realworld.command/handler   (fn [{:realworld.account/keys [existing-account id password-hash]}
-                                      {:realworld.account/keys [email]}]
-                                   (if existing-account
-                                     (response/error
-                                      :data {:realworld.error/type     :domain
-                                             :realworld.error/messages #{"Email is already taken"}})
-                                     (response/ok
-                                      :data {:realworld.account/id id}
-                                      :events [{:realworld.event/type    :realworld.account/registered
-                                                :realworld.account/id    id
-                                                :realworld.account/email email}]
-                                      :effects [[:realworld.account/create
-                                                 {:realworld.account/id            id
-                                                  :realworld.account/email         email
-                                                  :realworld.account/password-hash password-hash}]])))}})
+    :realworld.command/handler   register}
+
+   :realworld.account/login
+   {:realworld.command/schema    (command/schema :realworld.account/login LoginParameters)
+    :realworld.command/coeffects {:realworld.account/authenticated-account
+                                  [:realworld.account/authenticate
+                                   [:realworld.account/email]
+                                   [:realworld.account/password]]}
+    :realworld.command/handler   login}})

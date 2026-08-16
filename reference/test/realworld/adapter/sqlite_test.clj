@@ -36,4 +36,43 @@
                     (catch SQLException _
                       true)))
           (finally
+            (delete-database! path))))))
+
+  (describe "active account"
+    (it "persists and replaces the active account"
+      (let [path (temporary-database-path)
+            database (sqlite/database path)
+            first-id (parse-uuid "00000000-0000-0000-0000-000000000001")
+            second-id (parse-uuid "00000000-0000-0000-0000-000000000002")
+            first-account {:realworld.account/id            first-id
+                           :realworld.account/email         "alice@example.com"
+                           :realworld.account/password-hash "first-hash"}
+            second-account {:realworld.account/id            second-id
+                            :realworld.account/email         "bob@example.com"
+                            :realworld.account/password-hash "second-hash"}]
+        (try
+          (sqlite/initialize! database)
+          (sqlite/create-account! database first-account)
+          (sqlite/create-account! database second-account)
+          (expect (nil? (sqlite/active-account-id database)))
+
+          (sqlite/activate-account! database first-account)
+          (expect (= first-id (sqlite/active-account-id database)))
+
+          (sqlite/initialize! database)
+          (expect (= first-id (sqlite/active-account-id database)))
+
+          (sqlite/activate-account! database second-account)
+          (expect (= second-id
+                     (sqlite/active-account-id (sqlite/database path))))
+
+          (expect (try
+                    (sqlite/activate-account!
+                     database
+                     {:realworld.account/id
+                      (parse-uuid "00000000-0000-0000-0000-000000000003")})
+                    false
+                    (catch SQLException _
+                      true)))
+          (finally
             (delete-database! path)))))))

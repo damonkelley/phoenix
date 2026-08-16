@@ -42,6 +42,29 @@
         (expect (= 2 (:exit result)))
         (expect (string? (:error result))))))
 
+  (describe "login command"
+    (it "dispatches login arguments"
+      (let [application-context (Object.)
+            dispatched (atom nil)
+            result (cli/run
+                    ["login"
+                     "--email" "alice@example.com"
+                     "--password" "secret123"]
+                    {:application-factory (constantly application-context)
+                     :dispatch-command
+                     (fn [context command]
+                       (reset! dispatched [context command])
+                       {:realworld.application/response
+                        (response/ok)})})]
+        (expect (identical? application-context (first @dispatched)))
+        (expect (= {:realworld.command/name :realworld.account/login
+                    :realworld.command/parameters
+                    {:realworld.account/email    "alice@example.com"
+                     :realworld.account/password "secret123"}}
+                   (second @dispatched)))
+        (expect (= 0 (:exit result)))
+        (expect (= "Success" (:output result))))))
+
   (describe "unknown command"
     (it "is rejected as malformed usage before initialization"
       (let [initialized? (atom false)

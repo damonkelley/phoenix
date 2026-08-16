@@ -10,15 +10,28 @@
 
 (def default-database-path "realworld.db")
 
+(defn- authenticate [database email password]
+  (when-let [account (sqlite/account-by-email database email)]
+    (when (hashing/matches? password
+                            (:realworld.account/password-hash account))
+      (select-keys account
+                   [:realworld.account/id
+                    :realworld.account/email]))))
+
 (defn- application-context [database]
   (application/context
     {:command-definitions account/command-definitions
-     :coeffect-resolvers  {:realworld.account/by-email (fn [email]
-                                                         (sqlite/account-by-email database email))
-                           :realworld.password/hash    hashing/hash-password
-                           :realworld.uuid/generate    random-uuid}
+     :coeffect-resolvers  {:realworld.account/authenticate (fn [email password]
+                                                             (authenticate database email password))
+                           :realworld.account/by-email     (fn [email]
+                                                             (sqlite/account-by-email database email))
+                           :realworld.password/hash        hashing/hash-password
+                           :realworld.uuid/generate        random-uuid}
      :effect-interpreters {:realworld.account/create (fn [context account]
                                                        (sqlite/create-account! database account)
+                                                       context)
+                           :realworld.session/start  (fn [context account]
+                                                       (sqlite/activate-account! database account)
                                                        context)}}))
 
 (defn initialize [database-path]
@@ -29,18 +42,31 @@
 (defn dispatch [context command]
   (application/dispatch context command))
 
-(defn- register [{:keys [opts]}]
-  {:realworld.command/name :realworld.account/register
+(defn- account-command [command-name opts]
+  {:realworld.command/name command-name
    :realworld.command/parameters
    (update-keys opts #(keyword "realworld.account" (name %)))})
+
+(defn- register [{:keys [opts]}]
+  (account-command :realworld.account/register opts))
+
+(defn- login [{:keys [opts]}]
+  (account-command :realworld.account/login opts))
+
+(def ^:private credential-options
+  {:email    {:coerce :string
+              :desc   "Account email address"}
+   :password {:coerce :string
+              :desc   "Account password"}})
 
 (def command-table
   [{:cmds     ["register"]
     :fn       register
-    :spec     {:email    {:coerce :string
-                          :desc   "Account email address"}
-               :password {:coerce :string
-                          :desc   "Account password"}}
+    :spec     credential-options
+    :restrict true}
+   {:cmds     ["login"]
+    :fn       login
+    :spec     credential-options
     :restrict true}])
 
 (defn- error-message [response]

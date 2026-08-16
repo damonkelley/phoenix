@@ -3,14 +3,20 @@
             [next.jdbc :as jdbc]
             [next.jdbc.result-set :as result-set]))
 
+(def ^:private migration-resources
+  ["migrations/001-create-accounts.sql"
+   "migrations/002-create-active-account.sql"])
+
 (defn database [path]
-  (jdbc/get-datasource {:dbtype "sqlite"
-                        :dbname path}))
+  (jdbc/get-datasource {:dbtype       "sqlite"
+                        :dbname       path
+                        :foreign_keys true}))
 
 (defn initialize! [database]
-  (jdbc/execute!
-   database
-   [(slurp (io/resource "migrations/001-create-accounts.sql"))]))
+  (doseq [migration migration-resources]
+    (jdbc/execute!
+     database
+     [(slurp (io/resource migration))])))
 
 (defn account-by-email [database email]
   (when-let [account
@@ -33,3 +39,21 @@
     (str (:realworld.account/id account))
     (:realworld.account/email account)
     (:realworld.account/password-hash account)]))
+
+(defn activate-account! [database account]
+  (jdbc/execute-one!
+   database
+   ["INSERT INTO active_account (singleton, account_id)
+     VALUES (1, ?)
+     ON CONFLICT(singleton) DO UPDATE SET account_id = excluded.account_id"
+    (str (:realworld.account/id account))]))
+
+(defn active-account-id [database]
+  (some-> (jdbc/execute-one!
+           database
+           ["SELECT account_id
+             FROM active_account
+             WHERE singleton = 1"]
+           {:builder-fn result-set/as-unqualified-lower-maps})
+          :account_id
+          parse-uuid))
