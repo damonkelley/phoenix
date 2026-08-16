@@ -4,7 +4,8 @@
             [realworld.account :as account]
             [realworld.adapter.hashing :as hashing]
             [realworld.adapter.sqlite :as sqlite]
-            [realworld.application :as application])
+            [realworld.application :as application]
+            [realworld.interceptor :as interceptor])
   (:gen-class))
 
 (def default-database-path "realworld.db")
@@ -66,23 +67,68 @@
    :error "Operation failed"
    :cause error})
 
+(def handle-error
+  {:name  ::handle-error
+   :error (fn [context error]
+            (assoc context
+                   ::result
+                   (if (and (instance? clojure.lang.ExceptionInfo error)
+                            (= :org.babashka/cli (:type (ex-data error))))
+                     {:exit  2
+                      :error (ex-message error)}
+                     (operational-result error))))})
+
+(def parse-arguments
+  {:name  ::parse-arguments
+   :enter (fn [context]
+            (assoc context
+                   ::command
+                   (cli/dispatch command-table (::arguments context))))})
+
+(def initialize-application
+  {:name  ::initialize-application
+   :enter (fn [context]
+            (assoc context
+                   ::application-context
+                   ((::application-factory context)
+                    (::database-path context))))})
+
+(def invoke-command
+  {:name  ::invoke-command
+   :enter (fn [context]
+            (assoc context
+                   ::application-result
+                   ((::dispatch-command context)
+                    (::application-context context)
+                    (::command context))))})
+
+(def format-result
+  {:name  ::format-result
+   :enter (fn [context]
+            (assoc context
+                   ::result
+                   (command-result (::application-result context))))})
+
+(def cli-interceptors
+  [handle-error
+   parse-arguments
+   initialize-application
+   invoke-command
+   format-result])
+
 (defn run
   ([arguments]
-   (run arguments
-        (fn [command]
-          (dispatch (initialize default-database-path) command))))
-  ([arguments dispatch-command]
-   (try
-     (-> (cli/dispatch command-table arguments)
-         (dispatch-command)
-         (command-result))
-     (catch clojure.lang.ExceptionInfo exception
-       (if (= :org.babashka/cli (:type (ex-data exception)))
-         {:exit  2
-          :error (ex-message exception)}
-         (operational-result exception)))
-     (catch Throwable error
-       (operational-result error)))))
+   (run arguments {}))
+  ([arguments {:keys [application-factory database-path dispatch-command]
+               :or   {application-factory initialize
+                      database-path       default-database-path
+                      dispatch-command    dispatch}}]
+   (-> {::arguments           arguments
+        ::application-factory application-factory
+        ::database-path       database-path
+        ::dispatch-command    dispatch-command}
+       (interceptor/execute cli-interceptors)
+       (::result))))
 
 (defn -main [& arguments]
   (let [{:keys [exit output error]} (run arguments)]

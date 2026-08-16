@@ -3,32 +3,42 @@
             [realworld.adapter.cli.main :as cli]
             [realworld.response :as response]))
 
-(defn unexpected-dispatch [_command]
+(defn unexpected-dispatch [& _]
   (throw (ex-info "Unexpected dispatch" {})))
 
 (defdescribe command-line-interface
   (describe "register command"
     (it "dispatches registration arguments"
-      (let [dispatched (atom nil)
+      (let [application-context (Object.)
+            initialized-path (atom nil)
+            dispatched (atom nil)
             result (cli/run
                     ["register"
                      "--email" "alice@example.com"
                      "--password" "12345678"]
-                    (fn [command]
-                      (reset! dispatched command)
-                      {:realworld.application/response
-                       (response/ok)}))]
+                    {:application-factory
+                     (fn [database-path]
+                       (reset! initialized-path database-path)
+                       application-context)
+                     :dispatch-command
+                     (fn [context command]
+                       (reset! dispatched [context command])
+                       {:realworld.application/response
+                        (response/ok)})})]
+        (expect (= cli/default-database-path @initialized-path))
+        (expect (identical? application-context (first @dispatched)))
         (expect (= {:realworld.command/name :realworld.account/register
                     :realworld.command/parameters
                     {:realworld.account/email    "alice@example.com"
                      :realworld.account/password "12345678"}}
-                   @dispatched))
+                   (second @dispatched)))
         (expect (= 0 (:exit result)))
         (expect (= "Success" (:output result)))))
 
     (it "rejects unknown options"
       (let [result (cli/run ["register" "--unknown" "value"]
-                            unexpected-dispatch)]
+                            {:application-factory unexpected-dispatch
+                             :dispatch-command    unexpected-dispatch})]
         (expect (= 2 (:exit result)))
         (expect (string? (:error result))))))
 
@@ -41,4 +51,18 @@
                      (cli/run ["unknown"]))]
         (expect (= 2 (:exit result)))
         (expect (string? (:error result)))
-        (expect (false? @initialized?))))))
+        (expect (false? @initialized?)))))
+
+  (describe "operational failure"
+    (it "reports an unexpected dispatch failure"
+      (let [failure (RuntimeException. "Unavailable")
+            result (cli/run ["register"
+                             "--email" "alice@example.com"
+                             "--password" "12345678"]
+                            {:application-factory (constantly (Object.))
+                             :dispatch-command
+                             (fn [_context _command]
+                               (throw failure))})]
+        (expect (= 1 (:exit result)))
+        (expect (= "Operation failed" (:error result)))
+        (expect (identical? failure (:cause result)))))))
