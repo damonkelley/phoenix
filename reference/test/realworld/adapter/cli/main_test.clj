@@ -33,7 +33,12 @@
         (expect (string? (:error result))))))
 
   (describe "unknown command"
-    (it "is rejected as malformed usage"
-      (let [result (cli/run ["unknown"] unexpected-dispatch)]
+    (it "is rejected as malformed usage before initialization"
+      (let [initialized? (atom false)
+            result (with-redefs [cli/initialize
+                                 (fn [_]
+                                   (reset! initialized? true))]
+                     (cli/run ["unknown"]))]
         (expect (= 2 (:exit result)))
-        (expect (string? (:error result)))))))
+        (expect (string? (:error result)))
+        (expect (false? @initialized?))))))

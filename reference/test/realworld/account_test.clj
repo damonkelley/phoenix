@@ -12,6 +12,10 @@
    :realworld.command/parameters {:realworld.account/email    "alice@example.com"
                                   :realworld.account/password "secret123"}})
 
+(def register-command-schema
+  (get-in account/command-definitions
+          [:realworld.account/register :realworld.command/schema]))
+
 (defn password-hash [password]
   (str "hash:" password))
 
@@ -70,8 +74,8 @@
                                    "secret 123")})
 
 (def register-command-generator
-  "Commands spanning the valid and invalid regions of RegisterCommand."
-  (generators/let [command (schema/generator account/RegisterCommand)
+  "Commands spanning the valid and invalid regions of registration."
+  (generators/let [command (schema/generator register-command-schema)
                    mutate (generators/elements (vals mutations))]
     (mutate command)))
 
@@ -96,7 +100,7 @@
 
     (it "registers every command allowed by its schema"
       (check!
-       (properties/for-all [command (schema/generator account/RegisterCommand)]
+       (properties/for-all [command (schema/generator register-command-schema)]
                            (let [result (application/dispatch (test-context) command)
                                  parameters (:realworld.command/parameters command)
                                  response (:realworld.application/response result)]
@@ -116,7 +120,7 @@
                            (let [result (application/dispatch (test-context) command)
                                  response (:realworld.application/response result)
                                  created (::effect.create result)]
-                             (if (schema/valid? account/RegisterCommand command)
+                             (if (schema/valid? register-command-schema command)
                                (and (= :ok (:realworld.response/outcome response))
                                     (= (created-account
                                         (:realworld.command/parameters command))

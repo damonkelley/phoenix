@@ -1,38 +1,39 @@
 (ns realworld.application
   (:require [realworld.interceptor :as interceptor]
             [realworld.response :as response]
+            [realworld.command :as command]
             [realworld.schema :as schema]))
 
 (def resolve-command-definition
-  {:name  :resolve-command-definition
+  {:name  ::resolve-command-definition
    :enter (fn [context]
             (let [command-name (get-in context
-                                       [:realworld.application/command
-                                        :realworld.command/name])
+                                       [::command
+                                        ::command/name])
                   definition (get-in context
-                                     [:realworld.application/command-definitions
+                                     [::command-definitions
                                       command-name])]
               (if definition
                 (assoc context
-                       :realworld.application/command-definition
+                       ::command-definition
                        definition)
                 (-> context
-                    (assoc :realworld.application/response
+                    (assoc ::response
                            (response/error
                             :data {:realworld.command/name command-name}))
                     (interceptor/terminate)))))})
 
 (def validate-command
-  {:name  :validate-command
+  {:name  ::validate-command
    :enter (fn [context]
-            (let [definition (get context :realworld.application/command-definition)
+            (let [definition (get context ::command-definition)
                   command-schema (:realworld.command/schema definition)
-                  command (:realworld.application/command context)
+                  command (::command context)
                   errors (when command-schema
                            (schema/validate command-schema command))]
               (if (seq errors)
                 (-> context
-                    (assoc :realworld.application/response
+                    (assoc ::response
                            (response/error
                             :data {:realworld.error/type     :validation
                                    :realworld.error/messages errors}))
@@ -40,15 +41,15 @@
                 context)))})
 
 (def resolve-coeffects
-  {:name  :resolve-coeffects
+  {:name  ::resolve-coeffects
    :enter (fn [context]
             (let [declarations (get-in context
-                                       [:realworld.application/command-definition
-                                        :realworld.command/coeffects])
+                                       [::command-definition
+                                        ::command/coeffects])
                   parameters (get-in context
-                                     [:realworld.application/command
-                                      :realworld.command/parameters])
-                  resolvers (:realworld.application/coeffect-resolvers context)
+                                     [::command
+                                      ::command/parameters])
+                  resolvers (::coeffect-resolvers context)
                   coeffects (reduce-kv
                              (fn [resolved key [operation & parameter-paths]]
                                (assoc resolved
@@ -59,29 +60,29 @@
                              {}
                              declarations)]
               (assoc context
-                     :realworld.application/coeffects
+                     ::coeffects
                      coeffects)))})
 
 (def invoke-command-definition
   {:name  :invoke-command-definition
    :enter (fn [context]
             (let [handler (get-in context
-                                  [:realworld.application/command-definition
-                                   :realworld.command/handler])
-                  coeffects (:realworld.application/coeffects context)
+                                  [::command-definition
+                                   ::command/handler])
+                  coeffects (::coeffects context)
                   parameters (get-in context
-                                     [:realworld.application/command
-                                      :realworld.command/parameters])]
+                                     [::command
+                                      ::command/parameters])]
               (assoc context
-                     :realworld.application/response
+                     ::response
                      (handler coeffects parameters))))})
 
 (def handle-operational-error
   {:name  :handle-operational-error
    :error (fn [context error]
             (-> context
-                (assoc :realworld.application/error error)
-                (assoc :realworld.application/response
+                (assoc ::error error)
+                (assoc ::response
                        (response/error
                         :data {:realworld.error/type :operational}))))})
 
@@ -89,9 +90,9 @@
   {:name  :interpret-effects
    :leave (fn [context]
             (let [effects (get-in context
-                                  [:realworld.application/response
-                                   :realworld.response/effects])
-                  interpreters (:realworld.application/effect-interpreters context)]
+                                  [::response
+                                   ::response/effects])
+                  interpreters (::effect-interpreters context)]
               (reduce
                (fn [context [operation & args]]
                  (apply (get interpreters operation) context args))
@@ -110,12 +111,12 @@
                        coeffect-resolvers
                        effect-interpreters]}]
   (interceptor/enqueue
-   {:realworld.application/command-definitions command-definitions
-    :realworld.application/coeffect-resolvers  coeffect-resolvers
-    :realworld.application/effect-interpreters effect-interpreters}
+   {::command-definitions command-definitions
+    ::coeffect-resolvers  coeffect-resolvers
+    ::effect-interpreters effect-interpreters}
    interceptor-queue))
 
 (defn dispatch [context command]
   (-> context
-      (assoc :realworld.application/command command)
+      (assoc ::command command)
       (interceptor/execute)))

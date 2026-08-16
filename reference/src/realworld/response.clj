@@ -1,9 +1,9 @@
 (ns realworld.response)
 
 (def ^:private option-keys
-  {:data    :realworld.response/data
-   :events  :realworld.response/events
-   :effects :realworld.response/effects})
+  {:data    ::data
+   :events  ::events
+   :effects ::effects})
 
 (defn- build [outcome options]
   (reduce-kv
@@ -11,7 +11,7 @@
      (if-let [response-key (option-keys key)]
        (assoc response response-key value)
        (throw (ex-info "Unknown response option" {:option key}))))
-   {:realworld.response/outcome outcome}
+   {::outcome outcome}
    options))
 
 (defn ok [& {:as options}]

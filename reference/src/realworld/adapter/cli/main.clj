@@ -61,23 +61,28 @@
        :error  (error-message response)
        :result response})))
 
+(defn- operational-result [error]
+  {:exit  1
+   :error "Operation failed"
+   :cause error})
+
 (defn run
   ([arguments]
-   (try
-     (let [context (initialize default-database-path)]
-       (run arguments (partial dispatch context)))
-     (catch Throwable error
-       {:exit  1
-        :error "Operation failed"
-        :cause error})))
+   (run arguments
+        (fn [command]
+          (dispatch (initialize default-database-path) command))))
   ([arguments dispatch-command]
    (try
      (-> (cli/dispatch command-table arguments)
          (dispatch-command)
          (command-result))
      (catch clojure.lang.ExceptionInfo exception
-       {:exit  2
-        :error (ex-message exception)}))))
+       (if (= :org.babashka/cli (:type (ex-data exception)))
+         {:exit  2
+          :error (ex-message exception)}
+         (operational-result exception)))
+     (catch Throwable error
+       (operational-result error)))))
 
 (defn -main [& arguments]
   (let [{:keys [exit output error]} (run arguments)]

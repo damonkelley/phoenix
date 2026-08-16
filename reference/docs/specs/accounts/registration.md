@@ -11,7 +11,7 @@ realworld register --email alice@example.com --password secret123
 ## Success
 
 A successful registration creates an account with the supplied email address
-and password. Its success output is:
+and credentials derived from the supplied password. Its success output is:
 
 ```text
 Success
@@ -38,6 +38,9 @@ identity and uniqueness are case-insensitive.
 
 A password is required and must contain at least 8 characters. Passwords are
 not trimmed or otherwise normalized, and whitespace is not allowed.
+
+The supplied password is used to derive a salted, one-way password hash. The
+plaintext password is not persisted.
 
 ### Rule evaluation
 
@@ -66,3 +69,4 @@ This feature follows:
 - [ADR 0002: Validation error reporting](../../adr/0002-validation-error-reporting.md)
 - [ADR 0003: Operational failure classification](../../adr/0003-operational-failure-classification.md)
 - [ADR 0004: SQLite database location](../../adr/0004-sqlite-database-location.md)
+- [ADR 0005: Password credential storage](../../adr/0005-password-credential-storage.md)

@@ -1,4 +1,4 @@
-(ns realworld.registration-test
+(ns realworld.end-to-end.registration-test
   (:require [clojure.java.io :as io]
             [clojure.java.shell :as shell]
             [clojure.string :as string]
