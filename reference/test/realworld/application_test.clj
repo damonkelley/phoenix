@@ -1,17 +1,17 @@
 (ns realworld.application-test
   (:require [lazytest.core :refer [defdescribe describe expect it]]
-            [realworld.application :as application]))
+            [realworld.application :as application]
+            [realworld.command :as command]))
 
 (def command
   {:realworld.command/name       :test.command/execute
    :realworld.command/parameters {:test/value "value"}})
 
 (def Command
-  [:map
-   [:realworld.command/name [:= :test.command/execute]]
-   [:realworld.command/parameters
-    [:map
-     [:test/value :string]]]])
+  (command/schema
+   :test.command/execute
+   [:map
+    [:test/value :string]]))
 
 (def command-definitions
   {:test.command/execute

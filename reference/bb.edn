@@ -10,10 +10,10 @@
          :task (shell "clojure -M:test:nrepl")}
 
   format {:doc "Format Clojure source"
-          :task (shell "clojure -M:format fix src test")}
+          :task (shell "clojure -M:format fix src test test-e2e")}
 
   format:check {:doc "Check Clojure source formatting"
-                :task (shell "clojure -M:format check src test")}
+                :task (shell "clojure -M:format check src test test-e2e")}
 
   run {:doc "Run the RealWorld CLI"
        :override-builtin true

@@ -1,5 +1,6 @@
 (ns realworld.account
   (:require [clojure.string :as string]
+            [realworld.command :as command]
             [realworld.response :as response]))
 
 (def ^:private email-pattern
@@ -48,32 +49,27 @@
    [:realworld.account/email Email]
    [:realworld.account/password Password]])
 
-(def RegisterCommand
-  [:map
-   [:realworld.command/name [:= :realworld.account/register]]
-   [:realworld.command/parameters RegisterParameters]])
-
 (def command-definitions
   {:realworld.account/register
-   {:realworld.command/schema RegisterCommand
-    :realworld.command/coeffects
-    {:realworld.account/existing-account
-     [:realworld.account/by-email [:realworld.account/email]]
-     :realworld.account/id
-     [:realworld.uuid/generate]}
-    :realworld.command/handler
-    (fn [{:realworld.account/keys [existing-account id]}
-         {:realworld.account/keys [email password]}]
-      (if existing-account
-        (response/error
-         :data {:realworld.error/type     :domain
-                :realworld.error/messages #{"Email is already taken"}})
-        (response/ok
-         :data {:realworld.account/id id}
-         :events [{:realworld.event/type    :realworld.account/registered
-                   :realworld.account/id    id
-                   :realworld.account/email email}]
-         :effects [[:realworld.account/create
-                    {:realworld.account/id       id
-                     :realworld.account/email    email
-                     :realworld.account/password password}]])))}})
+   {:realworld.command/schema    (command/schema :realworld.account/register RegisterParameters)
+    :realworld.command/coeffects {:realworld.account/existing-account
+                                  [:realworld.account/by-email [:realworld.account/email]]
+                                  :realworld.account/id
+                                  [:realworld.uuid/generate]
+                                  :realworld.account/password-hash
+                                  [:realworld.password/hash [:realworld.account/password]]}
+    :realworld.command/handler   (fn [{:realworld.account/keys [existing-account id password-hash]}
+                                      {:realworld.account/keys [email]}]
+                                   (if existing-account
+                                     (response/error
+                                      :data {:realworld.error/type     :domain
+                                             :realworld.error/messages #{"Email is already taken"}})
+                                     (response/ok
+                                      :data {:realworld.account/id id}
+                                      :events [{:realworld.event/type    :realworld.account/registered
+                                                :realworld.account/id    id
+                                                :realworld.account/email email}]
+                                      :effects [[:realworld.account/create
+                                                 {:realworld.account/id            id
+                                                  :realworld.account/email         email
+                                                  :realworld.account/password-hash password-hash}]])))}})

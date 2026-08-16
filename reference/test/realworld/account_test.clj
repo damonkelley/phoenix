@@ -12,8 +12,17 @@
    :realworld.command/parameters {:realworld.account/email    "alice@example.com"
                                   :realworld.account/password "secret123"}})
 
+(defn password-hash [password]
+  (str "hash:" password))
+
+(defn created-account [{:realworld.account/keys [email password]}]
+  {:realworld.account/id            "id"
+   :realworld.account/email         email
+   :realworld.account/password-hash (password-hash password)})
+
 (def coeffect-resolvers
   {:realworld.account/by-email (constantly nil)
+   :realworld.password/hash    password-hash
    :realworld.uuid/generate    (constantly "id")})
 
 (def effect-interpreters
@@ -76,13 +85,13 @@
                                                   :realworld.account/id    "id"
                                                   :realworld.account/email "alice@example.com"}]
                     :realworld.response/effects [[:realworld.account/create
-                                                  {:realworld.account/id       "id"
-                                                   :realworld.account/email    "alice@example.com"
-                                                   :realworld.account/password "secret123"}]]}
+                                                  {:realworld.account/id            "id"
+                                                   :realworld.account/email         "alice@example.com"
+                                                   :realworld.account/password-hash "hash:secret123"}]]}
                    (:realworld.application/response result)))
-        (expect (= {:realworld.account/id       "id"
-                    :realworld.account/email    "alice@example.com"
-                    :realworld.account/password "secret123"}
+        (expect (= {:realworld.account/id            "id"
+                    :realworld.account/email         "alice@example.com"
+                    :realworld.account/password-hash "hash:secret123"}
                    (::effect.create result)))))
 
     (it "registers every command allowed by its schema"
@@ -93,7 +102,7 @@
                                  response (:realworld.application/response result)]
                              (= {:outcome     :ok
                                  :event-email (:realworld.account/email parameters)
-                                 :created     (assoc parameters :realworld.account/id "id")}
+                                 :created     (created-account parameters)}
                                 {:outcome     (:realworld.response/outcome response)
                                  :event-email (-> response
                                                   :realworld.response/events
@@ -109,9 +118,8 @@
                                  created (::effect.create result)]
                              (if (schema/valid? account/RegisterCommand command)
                                (and (= :ok (:realworld.response/outcome response))
-                                    (= (assoc (:realworld.command/parameters command)
-                                              :realworld.account/id
-                                              "id")
+                                    (= (created-account
+                                        (:realworld.command/parameters command))
                                        created))
                                (and (= :error (:realworld.response/outcome response))
                                     (= :validation (get-in response [:realworld.response/data

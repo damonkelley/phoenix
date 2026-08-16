@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS accounts (
+  id            TEXT PRIMARY KEY NOT NULL,
+  email         TEXT NOT NULL COLLATE NOCASE UNIQUE,
+  password_hash TEXT NOT NULL
+)

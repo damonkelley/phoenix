@@ -1,14 +1,19 @@
 {:paths ["src" "resources"]
- :deps {exoscale/interceptor {:mvn/version "0.1.17"}
+ :deps {buddy/buddy-hashers {:mvn/version "2.0.167"}
+        com.github.seancorfield/next.jdbc {:mvn/version "1.3.1118"}
+        exoscale/interceptor {:mvn/version "0.1.17"}
         metosin/malli {:mvn/version "0.20.1"}
+        org.babashka/cli {:mvn/version "0.12.86"}
         org.clojure/clojure {:mvn/version "1.12.5"}
-        org.babashka/cli {:mvn/version "0.12.86"}}
+        org.xerial/sqlite-jdbc {:mvn/version "3.53.2.1"}}
  :aliases
- {:test {:extra-paths ["test"]
+ {:test {:extra-paths ["test" "test-e2e"]
          :extra-deps {com.gfredericks/test.chuck {:mvn/version "0.2.15"}
                       io.github.noahtheduke/lazytest {:mvn/version "2.0.0"}
                       org.clojure/test.check {:mvn/version "1.1.3"}}
-         :main-opts ["-m" "lazytest.main"]}
+         :main-opts ["-m" "lazytest.main"
+                     "--dir" "test"
+                     "--dir" "test-e2e"]}
   :nrepl {:extra-deps {nrepl/nrepl {:mvn/version "1.7.0"}
                        cider/cider-nrepl {:mvn/version "0.62.2"}}
           :main-opts ["-m" "nrepl.cmdline"

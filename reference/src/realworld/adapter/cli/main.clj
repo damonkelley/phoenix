@@ -1,33 +1,88 @@
 (ns realworld.adapter.cli.main
-  (:require [babashka.cli :as cli])
+  (:require [babashka.cli :as cli]
+            [clojure.string :as string]
+            [realworld.account :as account]
+            [realworld.adapter.hashing :as hashing]
+            [realworld.adapter.sqlite :as sqlite]
+            [realworld.application :as application])
   (:gen-class))
 
-(def register-spec
-  {:email    {:desc "Account email address"}
-   :password {:desc "Account password"}})
+(def default-database-path "realworld.db")
+
+(defn- application-context [database]
+  (application/context
+    {:command-definitions account/command-definitions
+     :coeffect-resolvers  {:realworld.account/by-email (fn [email]
+                                                         (sqlite/account-by-email database email))
+                           :realworld.password/hash    hashing/hash-password
+                           :realworld.uuid/generate    random-uuid}
+     :effect-interpreters {:realworld.account/create (fn [context account]
+                                                       (sqlite/create-account! database account)
+                                                       context)}}))
+
+(defn initialize [database-path]
+  (let [database (sqlite/database database-path)]
+    (sqlite/initialize! database)
+    (application-context database)))
+
+(defn dispatch [context command]
+  (application/dispatch context command))
 
 (defn- register [{:keys [opts]}]
-  ;; The walking skeleton stops at the application boundary. Registration
-  ;; behavior will be connected here in the next vertical step.
-  {:command :register
-   :options (select-keys opts [:email :password])})
+  {:realworld.command/name :realworld.account/register
+   :realworld.command/parameters
+   (update-keys opts #(keyword "realworld.account" (name %)))})
 
 (def command-table
   [{:cmds     ["register"]
     :fn       register
-    :spec     register-spec
+    :spec     {:email    {:coerce :string
+                          :desc   "Account email address"}
+               :password {:coerce :string
+                          :desc   "Account password"}}
     :restrict true}])
 
-(defn run [arguments]
-  (try
-    {:exit   0
-     :result (cli/dispatch command-table arguments)}
-    (catch clojure.lang.ExceptionInfo exception
-      {:exit  2
-       :error (ex-message exception)})))
+(defn- error-message [response]
+  (let [data (:realworld.response/data response)
+        messages (:realworld.error/messages data)]
+    (if (seq messages)
+      (string/join (System/lineSeparator) (sort messages))
+      (case (:realworld.error/type data)
+        :operational "Operation failed"
+        "Command failed"))))
+
+(defn- command-result [context]
+  (let [response (:realworld.application/response context)]
+    (if (= :ok (:realworld.response/outcome response))
+      {:exit   0
+       :output "Success"
+       :result response}
+      {:exit   1
+       :error  (error-message response)
+       :result response})))
+
+(defn run
+  ([arguments]
+   (try
+     (let [context (initialize default-database-path)]
+       (run arguments (partial dispatch context)))
+     (catch Throwable error
+       {:exit  1
+        :error "Operation failed"
+        :cause error})))
+  ([arguments dispatch-command]
+   (try
+     (-> (cli/dispatch command-table arguments)
+         (dispatch-command)
+         (command-result))
+     (catch clojure.lang.ExceptionInfo exception
+       {:exit  2
+        :error (ex-message exception)}))))
 
 (defn -main [& arguments]
-  (let [{:keys [exit error]} (run arguments)]
+  (let [{:keys [exit output error]} (run arguments)]
+    (when output
+      (println output))
     (when error
       (binding [*out* *err*]
         (println error)))
