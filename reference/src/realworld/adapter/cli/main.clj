@@ -2,6 +2,7 @@
   (:require [babashka.cli :as cli]
             [clojure.string :as string]
             [realworld.account :as account]
+            [realworld.adapter.authentication :as authentication]
             [realworld.adapter.hashing :as hashing]
             [realworld.adapter.sqlite :as sqlite]
             [realworld.application :as application]
@@ -10,23 +11,15 @@
 
 (def default-database-path "realworld.db")
 
-(defn- authenticate [database email password]
-  (when-let [account (sqlite/account-by-email database email)]
-    (when (hashing/matches? password
-                            (:realworld.account/password-hash account))
-      (select-keys account
-                   [:realworld.account/id
-                    :realworld.account/email]))))
-
 (defn- application-context [database]
   (application/context
     {:command-definitions account/command-definitions
-     :coeffect-resolvers  {:realworld.account/authenticate (fn [email password]
-                                                             (authenticate database email password))
-                           :realworld.account/by-email     (fn [email]
-                                                             (sqlite/account-by-email database email))
-                           :realworld.password/hash        hashing/hash-password
-                           :realworld.uuid/generate        random-uuid}
+     :coeffect-resolvers  {:realworld.account/by-credentials (fn [email password]
+                                                               (authentication/account-by-credentials database email password))
+                           :realworld.account/by-email       (fn [email]
+                                                               (sqlite/account-by-email database email))
+                           :realworld.password/hash          hashing/hash-password
+                           :realworld.uuid/generate          random-uuid}
      :effect-interpreters {:realworld.account/create (fn [context account]
                                                        (sqlite/create-account! database account)
                                                        context)

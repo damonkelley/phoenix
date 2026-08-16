@@ -101,7 +101,7 @@
    :realworld.account/login
    {:realworld.command/schema    (command/schema :realworld.account/login LoginParameters)
     :realworld.command/coeffects {:realworld.account/authenticated-account
-                                  [:realworld.account/authenticate
+                                  [:realworld.account/by-credentials
                                    [:realworld.account/email]
                                    [:realworld.account/password]]}
     :realworld.command/handler   login}})

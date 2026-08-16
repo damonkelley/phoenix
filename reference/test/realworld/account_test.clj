@@ -38,10 +38,10 @@
    :realworld.account/password-hash (password-hash password)})
 
 (def coeffect-resolvers
-  {:realworld.account/authenticate (constantly authenticated-account)
-   :realworld.account/by-email     (constantly nil)
-   :realworld.password/hash        password-hash
-   :realworld.uuid/generate        (constantly "id")})
+  {:realworld.account/by-credentials (constantly authenticated-account)
+   :realworld.account/by-email       (constantly nil)
+   :realworld.password/hash          password-hash
+   :realworld.uuid/generate          (constantly "id")})
 
 (def effect-interpreters
   {:realworld.account/create
@@ -309,7 +309,7 @@
         (let [result (application/dispatch
                       (test-context
                        {:coeffect-resolvers
-                        {:realworld.account/authenticate (constantly nil)}})
+                        {:realworld.account/by-credentials (constantly nil)}})
                       {:realworld.command/name       :realworld.account/login
                        :realworld.command/parameters parameters})]
           (expect (= {:realworld.response/outcome :error
@@ -325,7 +325,7 @@
             result (application/dispatch
                     (test-context
                      {:coeffect-resolvers
-                      {:realworld.account/authenticate
+                      {:realworld.account/by-credentials
                        (fn [& _]
                          (reset! authentication-attempted? true))}})
                     {:realworld.command/name :realworld.account/login
@@ -347,7 +347,7 @@
             result (application/dispatch
                     (test-context
                      {:coeffect-resolvers
-                      {:realworld.account/authenticate
+                      {:realworld.account/by-credentials
                        (fn [email password]
                          (reset! authentication-parameters [email password])
                          nil)}})
