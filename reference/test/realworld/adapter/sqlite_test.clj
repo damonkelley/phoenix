@@ -98,9 +98,12 @@
           (sqlite/initialize! database)
           (sqlite/create-account! database account)
           (sqlite/create-article! database article)
-          (expect (= article
+          (expect (= (assoc article
+                            :realworld.article/author
+                            {:realworld.account/email "alice@example.com"})
                      (sqlite/article-by-slug (sqlite/database path)
                                              "hello-world")))
+          (expect (nil? (sqlite/article-by-slug database "missing")))
 
           (expect (try
                     (sqlite/create-article! database article)

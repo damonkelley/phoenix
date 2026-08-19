@@ -23,6 +23,8 @@
                                                                 (sqlite/account-by-email database email))
                            :realworld.article/feed            (fn []
                                                                 (sqlite/article-feed database))
+                           :realworld.article/view            (fn [article-slug]
+                                                                (sqlite/article-by-slug database article-slug))
                            :realworld.slug/generate           (fn [title]
                                                                 (slug/from-title title
                                                                                  (random-uuid)))
@@ -75,6 +77,11 @@
   {:realworld.command/name       :realworld.article/feed
    :realworld.command/parameters {}})
 
+(defn- view-article [{:keys [opts]}]
+  {:realworld.command/name :realworld.article/view
+   :realworld.command/parameters
+   {:realworld.article/slug (:slug opts)}})
+
 (def ^:private credential-options
   {:email    {:coerce :string
               :desc   "Account email address"}
@@ -104,6 +111,11 @@
    {:cmds     ["article" "feed"]
     :fn       article-feed
     :spec     {}
+    :restrict true}
+   {:cmds     ["article" "view"]
+    :fn       view-article
+    :spec     {:slug {:coerce :string
+                      :desc   "Article slug"}}
     :restrict true}])
 
 (defn- error-message [response]
@@ -118,16 +130,18 @@
 (def ^:private article-feed-headings
   ["TITLE" "SLUG" "TAGS" "AUTHOR"])
 
+(defn- article-tags-output [tags]
+  (if (seq tags)
+    (string/join ", " tags)
+    "(none)"))
+
 (defn- article-feed-row [article]
-  (let [tags (:realworld.article/tags article)]
-    [(:realworld.article/title article)
-     (:realworld.article/slug article)
-     (if (seq tags)
-       (string/join ", " tags)
-       "(none)")
-     (get-in article
-             [:realworld.article/author
-              :realworld.account/email])]))
+  [(:realworld.article/title article)
+   (:realworld.article/slug article)
+   (article-tags-output (:realworld.article/tags article))
+   (get-in article
+           [:realworld.article/author
+            :realworld.account/email])])
 
 (defn- column-widths [rows]
   (mapv (fn [column]
@@ -158,11 +172,28 @@
                               article-rows))))
     "No articles"))
 
+(defn- article-view-output [article]
+  (string/join
+   (System/lineSeparator)
+   [(str "Title: " (:realworld.article/title article))
+    (str "Slug: " (:realworld.article/slug article))
+    (str "Description: " (:realworld.article/description article))
+    (str "Tags: " (article-tags-output (:realworld.article/tags article)))
+    (str "Author: " (get-in article
+                            [:realworld.article/author
+                             :realworld.account/email]))
+    ""
+    "Body:"
+    (:realworld.article/body article)]))
+
 (defn- success-output [response]
   (let [data (:realworld.response/data response)]
     (cond
       (contains? data :realworld.article/articles)
       (article-feed-output (:realworld.article/articles data))
+
+      (contains? data :realworld.article/article)
+      (article-view-output (:realworld.article/article data))
 
       (:realworld.article/slug data)
       (:realworld.article/slug data)

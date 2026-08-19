@@ -8,7 +8,7 @@
   #"hello-world-[0-9a-f]{6}")
 
 (defdescribe user-journey
-  (it "registers, logs in, creates articles, and reads the feed"
+  (it "registers, logs in, creates, and reads articles"
     (support/with-workspace
       (fn [workspace]
         (let [registered (support/run-command
@@ -62,7 +62,22 @@
                               "Hello World  " second-slug "  (none)           alice@example.com\n"
                               "Hello World  " first-slug "  clojure, sqlite  alice@example.com\n")
                          (:out feed)))
-              (expect (= "" (:err feed)))))))))
+              (expect (= "" (:err feed))))
+
+            (let [viewed (support/run-command
+                          workspace
+                          "article" "view"
+                          "--slug" first-slug)]
+              (expect (= 0 (:exit viewed)))
+              (expect (= (str "Title: Hello World\n"
+                              "Slug: " first-slug "\n"
+                              "Description: An introduction\n"
+                              "Tags: clojure, sqlite\n"
+                              "Author: alice@example.com\n\n"
+                              "Body:\n"
+                              "Article contents\n")
+                         (:out viewed)))
+              (expect (= "" (:err viewed)))))))))
 
   (it "protects registered identity and authenticated behavior"
     (support/with-workspace
@@ -71,6 +86,14 @@
           (expect (= 0 (:exit feed)))
           (expect (= "No articles\n" (:out feed)))
           (expect (= "" (:err feed))))
+
+        (let [viewed (support/run-command
+                      workspace
+                      "article" "view"
+                      "--slug" "missing")]
+          (expect (= 1 (:exit viewed)))
+          (expect (= "" (:out viewed)))
+          (expect (= "Article not found\n" (:err viewed))))
 
         (let [registered (support/run-command
                           workspace
@@ -148,4 +171,12 @@
                        "Description is required"
                        "Body is required"
                        "Tag must not be blank"}
-                     (set (string/split-lines (:err article))))))))))
+                     (set (string/split-lines (:err article))))))
+
+        (let [viewed (support/run-command
+                      workspace
+                      "article" "view"
+                      "--slug" " ")]
+          (expect (= 1 (:exit viewed)))
+          (expect (= "" (:out viewed)))
+          (expect (= "Slug is required\n" (:err viewed))))))))

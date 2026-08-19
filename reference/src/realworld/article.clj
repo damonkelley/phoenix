@@ -24,6 +24,9 @@
 (def Tag
   (required-text "Tag must not be blank"))
 
+(def Slug
+  (required-text "Slug is required"))
+
 (def CreateParameters
   [:map
    [:realworld.article/title Title]
@@ -33,6 +36,10 @@
 
 (def FeedParameters
   [:map])
+
+(def ViewParameters
+  [:map
+   [:realworld.article/slug Slug]])
 
 (defn- create [{:realworld.account/keys [authenticated-account]
                 :realworld.article/keys [slug]
@@ -61,6 +68,14 @@
   (response/ok
    :data {:realworld.article/articles articles}))
 
+(defn- view [{:realworld.article/keys [article]} _parameters]
+  (if article
+    (response/ok
+     :data {:realworld.article/article article})
+    (response/error
+     :data {:realworld.error/type     :domain
+            :realworld.error/messages #{"Article not found"}})))
+
 (def command-definitions
   {:realworld.article/create
    {:realworld.command/schema    (command/schema :realworld.article/create CreateParameters)
@@ -77,4 +92,11 @@
    {:realworld.command/schema    (command/schema :realworld.article/feed FeedParameters)
     :realworld.command/coeffects {:realworld.article/articles
                                   [:realworld.article/feed]}
-    :realworld.command/handler   feed}})
+    :realworld.command/handler   feed}
+
+   :realworld.article/view
+   {:realworld.command/schema    (command/schema :realworld.article/view ViewParameters)
+    :realworld.command/coeffects {:realworld.article/article
+                                  [:realworld.article/view
+                                   [:realworld.article/slug]]}
+    :realworld.command/handler   view}})

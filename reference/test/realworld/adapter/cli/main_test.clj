@@ -139,6 +139,43 @@
         (expect (= 0 (:exit result)))
         (expect (= "No articles" (:output result))))))
 
+  (describe "article view command"
+    (it "dispatches the slug and formats the article"
+      (let [dispatched (atom nil)
+            article {:realworld.article/title       "Hello World"
+                     :realworld.article/slug        "hello-world"
+                     :realworld.article/description "An introduction"
+                     :realworld.article/body        "First line\nSecond line"
+                     :realworld.article/tags        ["clojure" "sqlite"]
+                     :realworld.article/author
+                     {:realworld.account/email "alice@example.com"}}
+            result (cli/run
+                    ["article" "view" "--slug" "hello-world"]
+                    {:application-factory (constantly (Object.))
+                     :dispatch-command
+                     (fn [_context command]
+                       (reset! dispatched command)
+                       {:realworld.application/response
+                        (response/ok
+                         :data {:realworld.article/article article})})})]
+        (expect (= {:realworld.command/name :realworld.article/view
+                    :realworld.command/parameters
+                    {:realworld.article/slug "hello-world"}}
+                   @dispatched))
+        (expect (= 0 (:exit result)))
+        (expect (= (string/join
+                    (System/lineSeparator)
+                    ["Title: Hello World"
+                     "Slug: hello-world"
+                     "Description: An introduction"
+                     "Tags: clojure, sqlite"
+                     "Author: alice@example.com"
+                     ""
+                     "Body:"
+                     "First line"
+                     "Second line"])
+                   (:output result))))))
+
   (describe "unknown command"
     (it "is rejected as malformed usage before initialization"
       (let [initialized? (atom false)

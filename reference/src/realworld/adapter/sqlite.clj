@@ -99,10 +99,12 @@
   (when-let [article
              (jdbc/execute-one!
               database
-              ["SELECT slug, author_id, title, description, body,
-                       created_at, updated_at
-                FROM articles
-                WHERE slug = ?"
+              ["SELECT article.slug, article.author_id, article.title,
+                       article.description, article.body, article.created_at,
+                       article.updated_at, account.email AS author_email
+                FROM articles AS article
+                JOIN accounts AS account ON account.id = article.author_id
+                WHERE article.slug = ?"
                slug]
               {:builder-fn result-set/as-unqualified-lower-maps})]
     {:realworld.article/slug        (:slug article)
@@ -111,6 +113,8 @@
      :realworld.article/description (:description article)
      :realworld.article/body        (:body article)
      :realworld.article/tags        (article-tags database slug)
+     :realworld.article/author      {:realworld.account/email
+                                     (:author_email article)}
      :realworld.article/created-at  (java.time.Instant/parse (:created_at article))
      :realworld.article/updated-at  (java.time.Instant/parse (:updated_at article))}))
 

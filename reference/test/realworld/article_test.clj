@@ -19,6 +19,11 @@
   {:realworld.command/name       :realworld.article/feed
    :realworld.command/parameters {}})
 
+(def view-command
+  {:realworld.command/name :realworld.article/view
+   :realworld.command/parameters
+   {:realworld.article/slug "hello-world-000000"}})
+
 (def create-command-schema
   (get-in article/command-definitions
           [:realworld.article/create :realworld.command/schema]))
@@ -40,8 +45,20 @@
     :realworld.article/author {:realworld.account/email
                                "alice@example.com"}}])
 
+(def viewed-article
+  {:realworld.article/title       "Hello World"
+   :realworld.article/slug        slug
+   :realworld.article/description "An introduction"
+   :realworld.article/body        "Article contents"
+   :realworld.article/tags        ["clojure" "sqlite"]
+   :realworld.article/author      {:realworld.account/email
+                                   "alice@example.com"}})
+
 (def coeffect-resolvers
   {:realworld.article/feed            (constantly feed-articles)
+   :realworld.article/view            (fn [requested-slug]
+                                        (when (= slug requested-slug)
+                                          viewed-article))
    :realworld.slug/generate           (constantly slug)
    :realworld.session/current-account (constantly authenticated-account)
    :realworld.time/now                (constantly now)})
@@ -212,4 +229,48 @@
         (expect (= {:realworld.response/outcome :ok
                     :realworld.response/data
                     {:realworld.article/articles []}}
-                   (:realworld.application/response result)))))))
+                   (:realworld.application/response result))))))
+
+  (describe "view"
+    (it "returns an article without authentication"
+      (let [result (application/dispatch
+                    (test-context
+                     {:coeffect-resolvers
+                      {:realworld.session/current-account
+                       (fn []
+                         (throw (ex-info "Unexpected authentication" {})))}})
+                    view-command)]
+        (expect (= {:realworld.response/outcome :ok
+                    :realworld.response/data
+                    {:realworld.article/article viewed-article}}
+                   (:realworld.application/response result)))))
+
+    (it "reports an unknown article"
+      (let [result (application/dispatch
+                    (test-context
+                     {:coeffect-resolvers
+                      {:realworld.article/view (constantly nil)}})
+                    view-command)]
+        (expect (= {:realworld.response/outcome :error
+                    :realworld.response/data
+                    {:realworld.error/type     :domain
+                     :realworld.error/messages #{"Article not found"}}}
+                   (:realworld.application/response result)))))
+
+    (it "validates the slug before article lookup"
+      (doseq [parameters [{} {:realworld.article/slug " "}]]
+        (let [coeffect-resolved? (atom false)
+              result (application/dispatch
+                      (test-context
+                       {:coeffect-resolvers
+                        {:realworld.article/view
+                         (fn [_slug]
+                           (reset! coeffect-resolved? true))}})
+                      {:realworld.command/name       :realworld.article/view
+                       :realworld.command/parameters parameters})]
+          (expect (= {:realworld.response/outcome :error
+                      :realworld.response/data
+                      {:realworld.error/type     :validation
+                       :realworld.error/messages #{"Slug is required"}}}
+                     (:realworld.application/response result)))
+          (expect (false? @coeffect-resolved?)))))))
