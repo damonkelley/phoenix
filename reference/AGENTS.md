@@ -1,24 +1,21 @@
 # RealWorld reference instructions
 
-Read `README.md` and `SPEC.md` before making changes in this directory. Before
-changing application behavior, also read the applicable feature specifications
-under `docs/specs/` and the ADRs they reference. If no applicable feature
-specification exists, agree on the intended behavior with the user and add one
-before implementing it.
+Read `README.md` and `SPEC.md` before making changes in this directory.
 
 ## Current phase
 
-This directory is phase 1 of the experiment described in `../APPROACH.md`.
-Build only the conventional RealWorld reference application. Do not introduce
-Phoenix tooling, generated code, specification machinery, or a proposed Phoenix
-directory structure.
+This directory is the completed phase 1 reference application described in
+`../APPROACH.md`. Its behavior and implementation are frozen at the
+`reference-phase-1` tag.
 
-The initial milestone is a standalone JVM Clojure CLI application that can
-register a user, log in, create an article, list the global feed, view an
-article, and persist users and articles in SQLite. A web interface comes later.
+Do not change application source, migrations, implementation-focused tests,
+feature specifications, or ADRs. Do not add Phoenix tooling, generated code, or
+phase 2 behavioral contracts here. New behavioral evidence must remain separate
+from the implementation it evaluates.
 
-Build incrementally. Discuss the next vertical behavior with the user rather
-than implementing the entire milestone speculatively.
+Changes in this directory are limited to explicitly agreed artifact packaging
+or reproducibility work. Such changes must preserve the frozen CLI behavior and
+must not become a source of behavioral requirements.
 
 ## Architecture
 
@@ -35,14 +32,12 @@ than implementing the entire milestone speculatively.
 
 ## Behavioral evidence
 
-Prefer tests at public boundaries. Behavior eventually used for regeneration
-must not depend on reference implementation namespaces or internal data
-structures. Keep implementation-focused unit tests separate from black-box CLI
-contracts.
+The tests in this directory remain implementation evidence from phase 1. They
+are not the independent phase 2 contract suite.
 
-Treat `docs/specs/` as the repository's current public behavior and keep it in
-sync with intentional behavior changes. Specifications should describe
-observable outcomes and rules rather than implementation structure.
+`docs/specs/` records the frozen public behavior. Phase 2 characterization may
+use those specifications and observable CLI execution, but must not derive
+contracts from implementation namespaces, internal tests, source structure,
+migrations, or database structure.
 
-Use the public RealWorld documentation to clarify product behavior. Do not
-consult sibling Phoenix implementations.
+Do not consult sibling Phoenix implementations.
