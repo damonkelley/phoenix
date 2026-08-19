@@ -13,14 +13,17 @@ creation, the public global feed, article viewing, and SQLite persistence.
 
 ## Purpose
 
-Phase 2 must produce durable evidence that can distinguish a behaviorally
-correct replacement from an incorrect one without consulting the reference
-implementation.
+Phase 2 must establish a durable public CLI behavioral oracle that can
+distinguish a materially correct black-box candidate from an incorrect one
+without consulting the reference implementation.
 
-This is the repository's deletion test. The phase is not complete merely
-because the existing implementation tests pass. It is complete when an opaque,
-reproducible reference artifact can be evaluated repeatedly at its public
-boundary and the evaluations detect meaningful behavioral mutations.
+This oracle is required for a later deletion test; phase 2 is not the complete
+deletion test. It neither deletes and regenerates an implementation nor
+captures every kind of evidence that safe regeneration will require. The phase
+is not complete merely because the existing implementation tests pass. It is
+complete when an opaque reference command is reproducibly invocable and
+repeatable public-boundary evaluations reject materially faulty black-box
+candidates.
 
 ## Evidence boundary
 
@@ -30,7 +33,7 @@ A behavior-characterization agent may use:
 - the public feature documentation under `reference/docs/specs/`;
 - the ADRs linked directly from those feature specifications;
 - the public RealWorld documentation when clarification is necessary;
-- observable execution of the packaged reference artifact.
+- observable execution of the opaque reference command.
 
 It must not inspect or derive behavioral requirements from:
 
@@ -43,59 +46,91 @@ It must not inspect or derive behavioral requirements from:
 a proposed Phoenix specification format or an additional source of phase 2
 requirements.
 
+The CLI evidence boundary is intentionally incomplete. Durable obligations
+that are not observable there, such as accepted requirements about credential
+storage, must be recorded for later evidence mechanisms rather than inferred
+from CLI behavior or silently dropped.
+
 ## Next work
 
-### 1. Package the reference artifact
+### 1. Establish reproducible opaque invocation
 
-Perform artifact packaging as a separately scoped task. That task may inspect
-the reference project only as needed to build a reproducible executable. It
-must:
+Phase 2 requires an opaque command that can be invoked reproducibly from an
+arbitrary temporary working directory. First agree on the least enabling work
+needed to provide it. Whether packaging is needed, the artifact format if
+packaging is chosen, and whether build outputs are committed all remain
+decision-gated. Packaging is enabling work, not a phase outcome.
+
+Any agreed reproducibility or packaging task must be separately scoped. It may
+inspect the reference only as needed to provide the command and must:
 
 - preserve the behavior frozen at `reference-phase-1`;
-- document the exact source revision, toolchain, build command, and invocation;
+- document the exact source revision, pinned toolchain or provisioning, any
+  build command, and the invocation;
 - avoid introducing application behavior or Phoenix machinery;
 - leave contract authoring to a later fresh session.
 
-The artifact format and whether build outputs are committed remain open. Agree
-on those choices before adding build machinery.
-
 ### 2. Characterize behavior in a fresh session
 
-After the artifact exists, begin contract work with a fresh agent context that
-has not inspected reference internals. Before adding a new top-level project,
-agree on its name, runtime, and invocation protocol.
+Once the command is available, begin contract work with a fresh agent context
+that has not inspected reference internals. Before adding a new top-level
+project, agree on its name, runtime, and invocation protocol.
 
 The contract runner should:
 
 - accept a configured executable rather than reference-specific namespaces;
-- run each scenario in an isolated temporary workspace starting from a clean
-  database;
+- run each scenario in an isolated temporary workspace starting from clean
+  state;
 - observe only command arguments, exit status, standard output, standard error,
   and persistence visible through later public commands;
 - tolerate intentional nondeterminism through properties rather than captured
   values;
 - run unchanged against future replacement implementations.
 
-Begin by inventorying observations and classifying each as a durable product
-obligation, an operational constraint, incidental reference behavior, or an
-unresolved decision. Do not automatically conserve every observable quirk.
-Account registration is the recommended first regenerative grain, subject to
-confirmation before implementation.
+Current equivalence is scoped to clean state, including persistence observable
+across separate command processes within a scenario. It does not prove that a
+replacement can inherit existing reference data. Existing-data continuity
+becomes an obligation only if it is chosen and supported by later evidence.
+
+Before any observed behavior is promoted into a contract, create and review an
+obligation ledger. Classify each candidate as a durable product obligation, an
+operational constraint, incidental reference behavior, or an unresolved
+decision, and record its rationale and provenance from permitted documentation
+or black-box observation. Observability alone is not a reason to conserve a
+quirk. The ledger should also identify accepted durable obligations that the
+CLI cannot establish so they can receive later evidence mechanisms.
+
+Account registration is the recommended first characterization slice, subject
+to confirmation before implementation. It is not yet a regenerative grain;
+that requires later evidence about replacement boundaries, mutation ownership,
+and deletion safety.
+
+Use meaningful mutations to test the oracle's discrimination. Here that means
+deliberately faulty black-box candidates or command substitutes whose
+observable behavior violates reviewed obligations. Do not mutate or inspect the
+frozen reference to create them.
+
+Whether evaluations are public, hidden, or a mixture remains an open decision.
+Hidden evaluation machinery is not required without an articulated need or
+threat model.
 
 ## Phase exit criteria
 
 Phase 2 ends when:
 
-- a reproducible reference artifact can be built and invoked without contract
+- the opaque reference command can be reproduced and invoked without contract
   code depending on implementation details;
+- the obligation ledger has been reviewed before observations are promoted;
 - black-box contracts cover the agreed CLI slice from clean state and across
-  process boundaries;
+  process boundaries, without claiming existing-data continuity;
 - the contracts run repeatedly and deterministically apart from explicitly
   modeled nondeterminism;
-- meaningful mutations demonstrate that the contracts reject materially broken
-  behavior;
-- public contracts, any hidden evaluation evidence, and implementation-focused
-  tests have clearly separated roles;
+- agreed faulty black-box candidates demonstrate that the contracts reject
+  materially broken behavior without mutating the frozen reference;
+- behavioral contracts and implementation-focused tests have clearly separated
+  roles;
+- durable obligations outside CLI observability remain identified for later
+  evidence rather than being treated as proven;
 - no architecture generalization, generator design, or Phoenix runtime has been
   smuggled into the characterization work.
 
@@ -104,8 +139,10 @@ Phase 2 ends when:
 This phase follows the principles articulated in Chad Fowler's Phoenix
 Architecture series: preserve what survives deletion, relocate rigor into
 durable evaluations, recover important knowledge before discarding an
-implementation, and discover a safe regenerative grain before building general
-machinery.
+implementation, and begin with a bounded characterization slice before building
+general machinery. The CLI oracle and reviewed obligation ledger contribute
+only part of the durable Phoenix primitives; fuller specification, context
+boundaries, regeneration provenance, and non-CLI evidence remain later work.
 
 Relevant articles include [The Deletion Test](https://aicoding.leaflet.pub/3md5ftetaes2e),
 [Evaluations Are the Real Codebase](https://aicoding.leaflet.pub/3mb526js42k26),

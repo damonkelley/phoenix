@@ -15,7 +15,8 @@ represents a final Phoenix product architecture.
 
 Phase 1 is complete. The reference application's behavior is frozen at the
 `reference-phase-1` tag. The repository is now in phase 2: freeze and
-characterize that behavior through contracts at the public CLI boundary.
+characterize that behavior by establishing the public CLI behavioral oracle
+required for a later deletion test.
 
 During this phase:
 
@@ -24,8 +25,8 @@ During this phase:
 - keep new behavioral evidence separate from `reference/`;
 - do not begin architecture generalization, implementation generation, or
   Phoenix tooling;
-- limit changes under `reference/` to explicitly agreed packaging or
-  reproducibility work that preserves the frozen behavior.
+- limit changes under `reference/` to explicitly agreed, decision-gated
+  reproducibility or packaging work that preserves the frozen behavior.
 
 ## Working approach
 
@@ -42,13 +43,15 @@ During this phase:
 Behavior-characterization work must begin in a fresh agent session and treat the
 reference implementation as opaque. It may use the public feature documentation
 under `reference/docs/specs/`, the decisions linked from those specifications,
-and an executable reference artifact. It must not inspect or derive contracts
-from `reference/src/`, `reference/test/`, migrations, the SQLite database, or
-source history and diffs that expose implementation details.
+and observable execution of the opaque reference command. It must not inspect
+or derive contracts from `reference/src/`, `reference/test/`, migrations, the
+SQLite database, or source history and diffs that expose implementation
+details.
 
-A separately scoped artifact-packaging task may inspect the reference as needed
-to produce the executable, but implementation observations from that task must
-not become behavioral contracts.
+A separately scoped reproducibility or packaging task, if agreed, may inspect
+the reference only as needed to make the opaque command reproducibly invocable,
+but implementation observations from that task must not become behavioral
+contracts.
 
 Do not inspect, read, search, copy, or derive implementation ideas from sibling
 repositories unless the user explicitly requests it. Sibling projects are

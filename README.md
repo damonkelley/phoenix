@@ -23,10 +23,14 @@ The frozen CLI can:
 - persist users and articles in SQLite.
 
 Phase 2 captures that system through implementation-independent contracts at
-its public CLI boundary. It will produce a reproducible reference artifact,
-exercise it from clean databases, and establish evaluations capable of
-detecting meaningful behavioral mutations. See [`PHASE2.md`](PHASE2.md) for the
-phase handoff, evidence boundary, next tasks, and exit criteria.
+its public CLI boundary. It will establish a reproducibly invocable opaque
+reference command, exercise it from clean state, and establish evaluations
+capable of rejecting materially faulty black-box candidates. This public CLI
+behavioral oracle is required for a later deletion test; it is not the complete
+deletion test. Packaging is decision-gated enabling work rather than a phase
+outcome, and existing-data continuity is not established by the current
+clean-state scope. See [`PHASE2.md`](PHASE2.md) for the phase handoff, evidence
+boundary, next tasks, and exit criteria.
 
 The reference implementation is now treated as opaque during behavioral
 characterization. Architecture generalization, Phoenix tooling, generation, and
