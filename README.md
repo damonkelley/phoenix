@@ -25,7 +25,8 @@ The frozen CLI can:
 Phase 2 captures that system through implementation-independent contracts at
 its public CLI boundary. It will produce a reproducible reference artifact,
 exercise it from clean databases, and establish evaluations capable of
-detecting meaningful behavioral mutations.
+detecting meaningful behavioral mutations. See [`PHASE2.md`](PHASE2.md) for the
+phase handoff, evidence boundary, next tasks, and exit criteria.
 
 The reference implementation is now treated as opaque during behavioral
 characterization. Architecture generalization, Phoenix tooling, generation, and

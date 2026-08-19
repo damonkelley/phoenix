@@ -1,7 +1,8 @@
 # Repository instructions
 
-Read `README.md` and `APPROACH.md` before making changes. Also follow any more
-specific `AGENTS.md` found in the directory being changed.
+Read `README.md`, `APPROACH.md`, and the current [`PHASE2.md`](PHASE2.md)
+handoff before making changes. Also follow any more specific `AGENTS.md` found
+in the directory being changed.
 
 ## Purpose
 
