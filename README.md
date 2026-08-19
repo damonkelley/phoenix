@@ -29,8 +29,9 @@ capable of rejecting materially faulty black-box candidates. This public CLI
 behavioral oracle is required for a later deletion test; it is not the complete
 deletion test. Packaging is decision-gated enabling work rather than a phase
 outcome, and existing-data continuity is not established by the current
-clean-state scope. See [`PHASE2.md`](PHASE2.md) for the phase handoff, evidence
-boundary, next tasks, and exit criteria.
+clean-state scope. Reviewed phase-2 evidence is kept independently under
+[`cli-contracts/`](cli-contracts/). See [`PHASE2.md`](PHASE2.md) for the phase
+handoff, evidence boundary, next tasks, and exit criteria.
 
 The reference implementation is now treated as opaque during behavioral
 characterization. Architecture generalization, Phoenix tooling, generation, and
