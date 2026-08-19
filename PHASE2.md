@@ -77,13 +77,16 @@ leaving the caller's working directory unchanged. There is no build command.
 Exact test, formatting, and temporary-workspace invocation commands are recorded
 in `reference/README.md`.
 
-### 2. Characterize behavior in a fresh session
+### 2. Behavior characterization in progress
 
-Once the command is available, begin contract work with a fresh agent context
-that has not inspected reference internals. Before adding a new top-level
-project, agree on its name, runtime, and invocation protocol.
+The independently runnable [`cli-contracts/`](cli-contracts/) project now holds
+reviewed obligation ledgers, separate non-normative black-box observations, and
+the contract runner. It uses an independently pinned Babashka runtime and
+accepts exactly one configured target executable without a reference-specific
+default. Each new feature slice must still begin in a fresh agent context that
+has not inspected reference internals.
 
-The contract runner should:
+The contract runner must continue to:
 
 - accept a configured executable rather than reference-specific namespaces;
 - run each scenario in an isolated temporary workspace starting from clean
@@ -107,10 +110,13 @@ or black-box observation. Observability alone is not a reason to conserve a
 quirk. The ledger should also identify accepted durable obligations that the
 CLI cannot establish so they can receive later evidence mechanisms.
 
-Account registration is the recommended first characterization slice, subject
-to confirmation before implementation. It is not yet a regenerative grain;
-that requires later evidence about replacement boundaries, mutation ownership,
-and deletion safety.
+Account registration is the completed first characterization slice. Its six
+reviewed scenarios run repeatedly against the opaque reference command, and
+three deliberately faulty command substitutes demonstrate discrimination of
+invalid acceptance, incomplete validation reporting, and case-sensitive
+identity. This is not yet a regenerative grain; that requires later evidence
+about replacement boundaries, mutation ownership, and deletion safety. Stop
+and review this increment before expanding to another feature.
 
 Use meaningful mutations to test the oracle's discrimination. Here that means
 deliberately faulty black-box candidates or command substitutes whose

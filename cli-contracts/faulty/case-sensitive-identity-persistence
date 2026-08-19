@@ -1,0 +1,41 @@
+#!/usr/bin/env bb
+
+(require '[clojure.java.io :as io]
+         '[clojure.string :as str])
+
+(def email-pattern
+  #"[A-Za-z0-9_%+\-]+(?:\.[A-Za-z0-9_%+\-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)*")
+
+(defn stop! [status messages]
+  (binding [*out* *err*]
+    (doseq [message messages]
+      (println message)))
+  (System/exit status))
+
+(let [args (vec *command-line-args*)]
+  (when (= "--password" (peek args))
+    (stop! 2 ["Missing option value"]))
+  (let [options (into {} (map vec (partition 2 (drop 2 args))))
+        email (get options "--email")
+        password (get options "--password")
+        errors (cond-> []
+                 (nil? email) (conj "Email is required")
+                 (and email (not (re-matches email-pattern email)))
+                 (conj "Email is invalid")
+                 (nil? password) (conj "Password is required")
+                 (and password (< (count password) 8))
+                 (conj "Password must be at least 8 characters")
+                 (and password (re-find #"\s" password))
+                 (conj "Password must not contain whitespace"))]
+    (when (seq errors)
+      (stop! 1 errors))
+    (let [state (io/file (System/getProperty "user.dir")
+                         ".case-sensitive-identity-state")
+          identities (if (.isFile state)
+                       (set (str/split-lines (slurp state)))
+                       #{})]
+      (if (contains? identities email)
+        (stop! 1 ["Email is already taken"])
+        (do
+          (spit state (str email "\n") :append true)
+          (println "Success"))))))
