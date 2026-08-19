@@ -3,8 +3,9 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
-PROJECT_CLASSPATH=$(cd "$PROJECT_DIR" && clojure -Spath)
+JAVA=$(mise which -C "$PROJECT_DIR" java)
+PROJECT_CLASSPATH=$(mise exec -C "$PROJECT_DIR" -- clojure -Spath)
 
-exec java \
+exec "$JAVA" \
   -cp "$PROJECT_DIR/src:$PROJECT_DIR/resources:$PROJECT_CLASSPATH" \
   clojure.main -m realworld.adapter.cli.main "$@"

@@ -11,6 +11,12 @@ The frozen reference is a standalone JVM Clojure CLI implementing the agreed
 RealWorld slice: account registration and login, authenticated article
 creation, the public global feed, article viewing, and SQLite persistence.
 
+A phase 2 reproducibility-only launcher change now makes the opaque command
+invocable from arbitrary working directories without changing the caller's
+working directory. It uses the exact Java, Clojure CLI, and Babashka versions
+already pinned in `reference/.mise.toml`; it does not introduce a packaged
+artifact or change frozen application source.
+
 ## Purpose
 
 Phase 2 must establish a durable public CLI behavioral oracle that can
@@ -53,22 +59,23 @@ from CLI behavior or silently dropped.
 
 ## Next work
 
-### 1. Establish reproducible opaque invocation
+### 1. Reproducible opaque invocation established
 
-Phase 2 requires an opaque command that can be invoked reproducibly from an
-arbitrary temporary working directory. First agree on the least enabling work
-needed to provide it. Whether packaging is needed, the artifact format if
-packaging is chosen, and whether build outputs are committed all remain
-decision-gated. Packaging is enabling work, not a phase outcome.
+The least enabling increment uses the existing project-local mise toolchain and
+launcher rather than producing an uberjar, native image, container, or committed
+binary. The application source remains frozen at the annotated tag
+`reference-phase-1` (`d8be109886efe75ee663548a59af218ff4986f5b`). Provision it
+from the repository root with:
 
-Any agreed reproducibility or packaging task must be separately scoped. It may
-inspect the reference only as needed to provide the command and must:
+```sh
+mise install -C reference java clojure babashka
+```
 
-- preserve the behavior frozen at `reference-phase-1`;
-- document the exact source revision, pinned toolchain or provisioning, any
-  build command, and the invocation;
-- avoid introducing application behavior or Phoenix machinery;
-- leave contract authoring to a later fresh session.
+The opaque command is `reference/bin/realworld`. It locates the project and its
+pinned Java and Clojure executables independently of the caller's location while
+leaving the caller's working directory unchanged. There is no build command.
+Exact test, formatting, and temporary-workspace invocation commands are recorded
+in `reference/README.md`.
 
 ### 2. Characterize behavior in a fresh session
 
